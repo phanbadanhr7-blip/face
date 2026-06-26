@@ -72,39 +72,91 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
     }
   };
 
-  // Listen for the callback postMessage
+  // Listen for the callback postMessage or BroadcastChannel or localStorage fallback
   React.useEffect(() => {
+    const processImportedPages = (importedPages: any[]) => {
+      if (importedPages.length === 0) {
+        alert("Không tìm thấy trang Facebook nào được quản lý bởi tài khoản này.");
+      } else {
+        // Add each page to the connections
+        importedPages.forEach((p: any, index: number) => {
+          onAddPage({
+            id: p.id,
+            name: p.name,
+            accessToken: p.accessToken,
+            picture: p.picture,
+            isDefault: index === 0 && pages.length === 0, // Set first page as default if no pages existed
+          });
+        });
+        alert(`Đăng nhập thành công! Đã tự động kết nối ${importedPages.length} trang Facebook.`);
+        setShowAddModal(false);
+      }
+      setAuthLoading(false);
+    };
+
+    // 1. PostMessage listener
     const handleMessage = (event: MessageEvent) => {
-      // Validate origin
+      // Validate origin - support same-origin, local development, and cloud run/AI studio domains
       const origin = event.origin;
-      if (!origin.endsWith('.run.app') && !origin.includes('localhost')) {
+      const isAllowedOrigin = 
+        origin === window.location.origin ||
+        origin.endsWith('.run.app') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
+        origin.endsWith('.google.com') ||
+        origin.endsWith('.googleusercontent.com') ||
+        origin.endsWith('.aistudio.google');
+
+      if (!isAllowedOrigin) {
         return;
       }
 
       if (event.data?.type === 'FB_AUTH_SUCCESS') {
         const importedPages = event.data.pages || [];
-        if (importedPages.length === 0) {
-          alert("Không tìm thấy trang Facebook nào được quản lý bởi tài khoản này.");
-        } else {
-          // Add each page to the connections
-          importedPages.forEach((p: any, index: number) => {
-            onAddPage({
-              id: p.id,
-              name: p.name,
-              accessToken: p.accessToken,
-              picture: p.picture,
-              isDefault: index === 0 && pages.length === 0, // Set first page as default if no pages existed
-            });
-          });
-          alert(`Đăng nhập thành công! Đã tự động kết nối ${importedPages.length} trang Facebook.`);
-          setShowAddModal(false);
+        processImportedPages(importedPages);
+      }
+    };
+
+    // 2. BroadcastChannel listener
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('facebook_auth');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'FB_AUTH_SUCCESS') {
+          const importedPages = event.data.pages || [];
+          processImportedPages(importedPages);
         }
-        setAuthLoading(false);
+      };
+    } catch (e) {
+      console.warn("BroadcastChannel not supported in this environment:", e);
+    }
+
+    // 3. LocalStorage storage event listener fallback
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'fb_auth_success' && event.newValue) {
+        try {
+          const data = JSON.parse(event.newValue);
+          if (data && data.pages) {
+            processImportedPages(data.pages);
+            // Clear storage key
+            localStorage.removeItem('fb_auth_success');
+          }
+        } catch (e) {
+          console.error("Failed to parse storage authentication data:", e);
+        }
       }
     };
 
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('storage', handleStorageChange);
+      if (bc) {
+        bc.close();
+      }
+    };
   }, [pages, onAddPage]);
 
   const handleCopyId = (id: string) => {

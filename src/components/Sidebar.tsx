@@ -36,11 +36,11 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
       <div className="p-4 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
-            BD
+            MT
           </div>
           <div className="overflow-hidden">
-            <h2 className="font-semibold text-sm text-slate-800 truncate">Ba Danh</h2>
-            <p className="text-xs text-slate-500 truncate">danhcan@gmail.com</p>
+            <h2 className="font-semibold text-sm text-slate-800 truncate">MÁY TÍNH MŨI NÉ</h2>
+            <p className="text-xs text-slate-500 truncate">Quản trị viên</p>
           </div>
         </div>
       </div>

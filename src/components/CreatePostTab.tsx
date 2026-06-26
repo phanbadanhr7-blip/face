@@ -561,7 +561,7 @@ export default function CreatePostTab({ pages, isDemoMode, onAddPost }: CreatePo
                   <span className="w-4 h-4 bg-blue-500 rounded-full text-white flex items-center justify-center text-[9px]">👍</span>
                   <span className="w-4 h-4 bg-red-500 rounded-full text-white flex items-center justify-center text-[9px]">❤️</span>
                 </div>
-                <span>Ba Danh và 18 người khác</span>
+                <span>MÁY TÍNH MŨI NÉ và 18 người khác</span>
               </div>
               <div className="space-x-3">
                 <span>3 bình luận</span>

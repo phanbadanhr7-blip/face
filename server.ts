@@ -300,11 +300,11 @@ app.get("/auth/facebook/mock-login", (req: Request, res: Response) => {
             <!-- User Intro -->
             <div class="flex items-center gap-4 border-b border-slate-100 pb-5">
               <div class="w-12 h-12 bg-[#1877F2] text-white font-bold rounded-full flex items-center justify-center text-lg shadow-sm">
-                BD
+                MT
               </div>
               <div>
-                <p class="text-sm font-bold text-slate-800">Ba Danh</p>
-                <p class="text-xs text-slate-500">danhcan@gmail.com</p>
+                <p class="text-sm font-bold text-slate-800">MÁY TÍNH MŨI NÉ</p>
+                <p class="text-xs text-slate-500">Quản trị viên</p>
               </div>
             </div>
 
@@ -390,7 +390,7 @@ app.get("/auth/facebook/mock-login", (req: Request, res: Response) => {
                 onclick="handleSubmit()" 
                 class="flex-1 py-2.5 bg-[#1877F2] hover:bg-[#1565C0] rounded-lg text-xs font-bold text-white shadow-md transition-colors cursor-pointer"
               >
-                Continue as Ba Danh
+                Tiếp tục dưới tên MÁY TÍNH MŨI NÉ
               </button>
             </div>
           </div>
@@ -427,12 +427,39 @@ app.get("/auth/facebook/mock-login", (req: Request, res: Response) => {
               });
             }
 
-            if (window.opener) {
-              window.opener.postMessage({ type: 'FB_AUTH_SUCCESS', pages: pages }, '*');
-              window.close();
-            } else {
-              alert("Opener window not found. Please trigger this login from the dashboard.");
+            // 1. Send via BroadcastChannel
+            try {
+              const bc = new BroadcastChannel('facebook_auth');
+              bc.postMessage({ type: 'FB_AUTH_SUCCESS', pages: pages });
+              bc.close();
+            } catch (e) {
+              console.warn("BroadcastChannel error:", e);
             }
+
+            // 2. Send via LocalStorage
+            try {
+              localStorage.setItem('fb_auth_success', JSON.stringify({ pages: pages, timestamp: Date.now() }));
+            } catch (e) {
+              console.warn("localStorage error:", e);
+            }
+
+            // 3. Fallback to postMessage
+            if (window.opener) {
+              try {
+                window.opener.postMessage({ type: 'FB_AUTH_SUCCESS', pages: pages }, '*');
+              } catch (e) {
+                console.warn("postMessage error:", e);
+              }
+            }
+
+            // Close the popup after a small delay
+            setTimeout(() => {
+              window.close();
+              // If window didn't close (not a popup), redirect to dashboard
+              setTimeout(() => {
+                window.location.href = '/';
+              }, 500);
+            }, 300);
           }
         </script>
       </body>
@@ -510,12 +537,41 @@ app.get("/auth/facebook/callback", async (req: Request, res: Response) => {
             <h2 class="text-lg font-bold text-emerald-800">Successfully Logged In!</h2>
             <p class="text-xs text-slate-500">Importing ${pages.length} Facebook Pages to your dashboard...</p>
             <script>
-              if (window.opener) {
-                window.opener.postMessage({ type: 'FB_AUTH_SUCCESS', pages: ${JSON.stringify(pages)} }, '*');
-                window.close();
-              } else {
-                window.location.href = '/';
+              const pages = ${JSON.stringify(pages)};
+
+              // 1. Send via BroadcastChannel
+              try {
+                const bc = new BroadcastChannel('facebook_auth');
+                bc.postMessage({ type: 'FB_AUTH_SUCCESS', pages: pages });
+                bc.close();
+              } catch (e) {
+                console.warn("BroadcastChannel error:", e);
               }
+
+              // 2. Send via LocalStorage
+              try {
+                localStorage.setItem('fb_auth_success', JSON.stringify({ pages: pages, timestamp: Date.now() }));
+              } catch (e) {
+                console.warn("localStorage error:", e);
+              }
+
+              // 3. Fallback to postMessage
+              if (window.opener) {
+                try {
+                  window.opener.postMessage({ type: 'FB_AUTH_SUCCESS', pages: pages }, '*');
+                } catch (e) {
+                  console.warn("postMessage error:", e);
+                }
+              }
+
+              // Close the popup after a small delay
+              setTimeout(() => {
+                window.close();
+                // If window didn't close (not a popup), redirect to dashboard
+                setTimeout(() => {
+                  window.location.href = '/';
+                }, 500);
+              }, 300);
             </script>
           </div>
         </body>
