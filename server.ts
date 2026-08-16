@@ -254,17 +254,74 @@ app.post("/api/facebook/publish", async (req: Request, res: Response): Promise<v
   }
 });
 
+// Helper to get reliable absolute host URL for OAuth callbacks
+const getHostUrl = (req: Request): string => {
+  if (process.env.APP_URL && process.env.APP_URL !== "MY_APP_URL" && !process.env.APP_URL.includes("MY_APP_URL")) {
+    return process.env.APP_URL.replace(/\/$/, "");
+  }
+  const forwardedHost = req.headers['x-forwarded-host'] as string;
+  const host = forwardedHost || req.get('host');
+  if (host && !host.includes('localhost') && !host.includes('127.0.0.1') && !host.includes('aistudio.google')) {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    return `${proto}://${host}`;
+  }
+  return "https://ais-dev-qv2ignianzzncmdt66dz5z-876098673256.asia-southeast1.run.app";
+};
+
+// API Endpoint to inspect user token or page token and auto-fetch managed pages
+app.post("/api/facebook/inspect-token", async (req: Request, res: Response) => {
+  const { token } = req.body;
+  if (!token) {
+    return res.status(400).json({ error: "Access token is required." });
+  }
+
+  try {
+    // 1. Try querying /me/accounts (works with User Access Token)
+    const accountsRes = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${encodeURIComponent(token)}&fields=id,name,access_token,picture`);
+    const accountsData: any = await accountsRes.json();
+
+    if (accountsRes.ok && accountsData.data && accountsData.data.length > 0) {
+      const pages = accountsData.data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        accessToken: p.access_token,
+        picture: p.picture?.data?.url || `https://images.unsplash.com/photo-1542751371-adc38448a05e?w=150&auto=format&fit=crop&q=60`
+      }));
+      return res.json({ success: true, pages });
+    }
+
+    // 2. If /me/accounts is empty or fails, maybe it's a Page Access Token (/me directly)
+    const pageRes = await fetch(`https://graph.facebook.com/v18.0/me?access_token=${encodeURIComponent(token)}&fields=id,name,picture`);
+    const pageData: any = await pageRes.json();
+
+    if (pageRes.ok && pageData.id) {
+      const singlePage = {
+        id: pageData.id,
+        name: pageData.name || "Fanpage Facebook",
+        accessToken: token,
+        picture: pageData.picture?.data?.url || `https://images.unsplash.com/photo-1542751371-adc38448a05e?w=150&auto=format&fit=crop&q=60`
+      };
+      return res.json({ success: true, pages: [singlePage] });
+    }
+
+    throw new Error(accountsData.error?.message || pageData.error?.message || "Token Facebook không hợp lệ hoặc đã hết hạn.");
+  } catch (error: any) {
+    console.error("Inspect Token Error:", error);
+    res.status(400).json({ error: error.message || "Failed to inspect token." });
+  }
+});
+
 // API Endpoint to get Facebook Auth URL (Live or Mock/Simulated)
 app.get("/api/auth/facebook/url", (req: Request, res: Response) => {
-  const appId = process.env.FACEBOOK_APP_ID;
+  const appId = process.env.FACEBOOK_APP_ID || "1405503574771652";
+  const host = getHostUrl(req);
+  const redirectUri = `${host}/auth/facebook/callback`;
+
   if (appId) {
-    const host = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-    const redirectUri = `${host}/auth/facebook/callback`;
     const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=pages_manage_posts,pages_read_engagement,pages_show_list`;
-    res.json({ url: authUrl, isLive: true });
+    res.json({ url: authUrl, isLive: true, redirectUri });
   } else {
-    const host = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-    res.json({ url: `${host}/auth/facebook/mock-login`, isLive: false });
+    res.json({ url: `${host}/auth/facebook/mock-login`, isLive: false, redirectUri });
   }
 });
 
@@ -492,9 +549,9 @@ app.get("/auth/facebook/callback", async (req: Request, res: Response) => {
   }
 
   try {
-    const appId = process.env.FACEBOOK_APP_ID;
-    const appSecret = process.env.FACEBOOK_APP_SECRET;
-    const host = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const appId = process.env.FACEBOOK_APP_ID || "1405503574771652";
+    const appSecret = process.env.FACEBOOK_APP_SECRET || "b80a4b2b45cf66f22662b347c3d96cbb";
+    const host = getHostUrl(req);
     const redirectUri = `${host}/auth/facebook/callback`;
 
     // 1. Exchange OAuth code for User Access Token

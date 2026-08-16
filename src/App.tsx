@@ -10,6 +10,10 @@ import { FacebookPage, FacebookPost } from "./types";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { 
   db, 
+  getStoredPages,
+  setStoredPages,
+  getStoredPosts,
+  setStoredPosts,
   savePageToFirestore, 
   deletePageFromFirestore, 
   savePostToFirestore, 
@@ -20,47 +24,79 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>("connections");
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
 
-  const [pages, setPages] = useState<FacebookPage[]>([]);
-  const [posts, setPosts] = useState<FacebookPost[]>([]);
+  const [pages, setPages] = useState<FacebookPage[]>(() => getStoredPages());
+  const [posts, setPosts] = useState<FacebookPost[]>(() => getStoredPosts());
 
-  // Synchronize pages with Firestore in real-time
+  // Synchronize pages with Firestore in real-time if available
   useEffect(() => {
-    const q = query(collection(db, "fb_pages"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const pagesList: FacebookPage[] = [];
-      snapshot.forEach((doc) => {
-        pagesList.push(doc.data() as FacebookPage);
-      });
-      setPages(pagesList);
-    }, (error) => {
-      console.error("Error fetching pages from Firestore: ", error);
-    });
+    if (!db) return;
 
-    return () => unsubscribe();
+    try {
+      const q = query(collection(db, "fb_pages"), orderBy("createdAt", "desc"));
+      const unsubscribe = onSnapshot(
+        q, 
+        (snapshot) => {
+          const pagesList: FacebookPage[] = [];
+          snapshot.forEach((doc) => {
+            pagesList.push(doc.data() as FacebookPage);
+          });
+          if (pagesList.length > 0) {
+            setPages(pagesList);
+            setStoredPages(pagesList);
+          }
+        }, 
+        (error: any) => {
+          // Graceful fallback to local storage if Firestore rules require auth
+          if (!error?.message?.includes("Missing or insufficient permissions")) {
+            console.warn("Firestore pages subscription status:", error?.message || error);
+          }
+        }
+      );
+
+      return () => unsubscribe();
+    } catch (e) {
+      // Local storage fallback active
+    }
   }, []);
 
-  // Synchronize posts with Firestore in real-time
+  // Synchronize posts with Firestore in real-time if available
   useEffect(() => {
-    const q = collection(db, "fb_posts");
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const postsList: FacebookPost[] = [];
-      snapshot.forEach((doc) => {
-        postsList.push(doc.data() as FacebookPost);
-      });
-      
-      // Sort posts so that published/scheduled at newer dates appear first
-      postsList.sort((a, b) => {
-        const timeA = b.publishedAt || b.scheduledAt || "";
-        const timeB = a.publishedAt || a.scheduledAt || "";
-        return timeA.localeCompare(timeB);
-      });
+    if (!db) return;
 
-      setPosts(postsList);
-    }, (error) => {
-      console.error("Error fetching posts from Firestore: ", error);
-    });
+    try {
+      const q = collection(db, "fb_posts");
+      const unsubscribe = onSnapshot(
+        q, 
+        (snapshot) => {
+          const postsList: FacebookPost[] = [];
+          snapshot.forEach((doc) => {
+            postsList.push(doc.data() as FacebookPost);
+          });
+          
+          // Sort posts so that published/scheduled at newer dates appear first
+          postsList.sort((a, b) => {
+            const timeA = b.publishedAt || b.scheduledAt || "";
+            const timeB = a.publishedAt || a.scheduledAt || "";
+            return timeA.localeCompare(timeB);
+          });
 
-    return () => unsubscribe();
+          if (postsList.length > 0) {
+            setPosts(postsList);
+            setStoredPosts(postsList);
+          }
+        }, 
+        (error: any) => {
+          // Graceful fallback to local storage if Firestore rules require auth
+          if (!error?.message?.includes("Missing or insufficient permissions")) {
+            console.warn("Firestore posts subscription status:", error?.message || error);
+          }
+        }
+      );
+
+      return () => unsubscribe();
+    } catch (e) {
+      // Local storage fallback active
+    }
   }, []);
 
   // Page Management Handlers
@@ -76,9 +112,18 @@ export default function App() {
       isDefault: newPage.isDefault || pages.length === 0,
     };
 
+    setPages((prevPages) => {
+      let updated = prevPages.filter(p => p.id !== createdPage.id);
+      if (createdPage.isDefault) {
+        updated = updated.map(p => ({ ...p, isDefault: false }));
+      }
+      const nextPages = [createdPage, ...updated];
+      setStoredPages(nextPages);
+      return nextPages;
+    });
+
     try {
       if (createdPage.isDefault) {
-        // If setting as default, clear defaults on other pages
         for (const p of pages) {
           if (p.isDefault && p.id !== createdPage.id) {
             await savePageToFirestore({ ...p, isDefault: false });
@@ -87,19 +132,34 @@ export default function App() {
       }
       await savePageToFirestore(createdPage);
     } catch (err) {
-      console.error("Error saving page to Firestore:", err);
+      console.error("Error saving page:", err);
     }
   };
 
   const handleDisconnectPage = async (id: string) => {
+    setPages((prevPages) => {
+      const nextPages = prevPages.filter(p => p.id !== id);
+      setStoredPages(nextPages);
+      return nextPages;
+    });
+
     try {
       await deletePageFromFirestore(id);
     } catch (err) {
-      console.error("Error deleting page from Firestore:", err);
+      console.error("Error deleting page:", err);
     }
   };
 
   const handleSetDefaultPage = async (id: string) => {
+    setPages((prevPages) => {
+      const nextPages = prevPages.map(p => ({
+        ...p,
+        isDefault: p.id === id
+      }));
+      setStoredPages(nextPages);
+      return nextPages;
+    });
+
     try {
       for (const p of pages) {
         const isTarget = p.id === id;
@@ -108,7 +168,7 @@ export default function App() {
         }
       }
     } catch (err) {
-      console.error("Error setting default page in Firestore:", err);
+      console.error("Error setting default page:", err);
     }
   };
 
@@ -150,6 +210,11 @@ export default function App() {
             error: data.error || "Facebook publishing rejected.",
             fbPostId: null
           };
+          setPosts(prev => {
+            const next = [failedPost, ...prev.filter(p => p.id !== randomId)];
+            setStoredPosts(next);
+            return next;
+          });
           await savePostToFirestore(failedPost);
           return { success: false, error: data.error };
         }
@@ -164,6 +229,11 @@ export default function App() {
           fbPostId: data.fbPostId
         };
 
+        setPosts(prev => {
+          const next = [successPost, ...prev.filter(p => p.id !== randomId)];
+          setStoredPosts(next);
+          return next;
+        });
         await savePostToFirestore(successPost);
         return { 
           success: true, 
@@ -180,6 +250,11 @@ export default function App() {
           error: err.message || "Failed to establish server connection.",
           fbPostId: null
         };
+        setPosts(prev => {
+          const next = [failedPost, ...prev.filter(p => p.id !== randomId)];
+          setStoredPosts(next);
+          return next;
+        });
         await savePostToFirestore(failedPost);
         return { success: false, error: err.message };
       }
@@ -193,6 +268,11 @@ export default function App() {
         fbPostId: null
       };
 
+      setPosts(prev => {
+        const next = [savedPost, ...prev.filter(p => p.id !== randomId)];
+        setStoredPosts(next);
+        return next;
+      });
       await savePostToFirestore(savedPost);
       return { success: true };
     }
@@ -205,7 +285,12 @@ export default function App() {
 
     const page = pages.find(p => p.id === post.pageId);
     if (!page) {
-      const updatedPost = { ...post, status: 'failed', error: 'Page connection not found.' };
+      const updatedPost = { ...post, status: 'failed' as const, error: 'Page connection not found.' };
+      setPosts(prev => {
+        const next = prev.map(p => p.id === id ? updatedPost : p);
+        setStoredPosts(next);
+        return next;
+      });
       await savePostToFirestore(updatedPost as FacebookPost);
       return;
     }
@@ -231,6 +316,11 @@ export default function App() {
           status: 'failed', 
           error: data.error || 'Meta server rejected token.' 
         };
+        setPosts(prev => {
+          const next = prev.map(p => p.id === id ? updatedPost : p);
+          setStoredPosts(next);
+          return next;
+        });
         await savePostToFirestore(updatedPost);
         throw new Error(data.error || "Facebook publishing failed.");
       }
@@ -243,6 +333,11 @@ export default function App() {
         error: null,
         fbPostId: data.fbPostId
       };
+      setPosts(prev => {
+        const next = prev.map(p => p.id === id ? updatedPost : p);
+        setStoredPosts(next);
+        return next;
+      });
       await savePostToFirestore(updatedPost);
 
     } catch (err: any) {
@@ -251,16 +346,27 @@ export default function App() {
         status: 'failed',
         error: err.message || "Network request failed."
       };
+      setPosts(prev => {
+        const next = prev.map(p => p.id === id ? updatedPost : p);
+        setStoredPosts(next);
+        return next;
+      });
       await savePostToFirestore(updatedPost);
       throw err;
     }
   };
 
   const handleDeletePost = async (id: string) => {
+    setPosts(prev => {
+      const next = prev.filter(p => p.id !== id);
+      setStoredPosts(next);
+      return next;
+    });
+
     try {
       await deletePostFromFirestore(id);
     } catch (err) {
-      console.error("Error deleting post from Firestore:", err);
+      console.error("Error deleting post:", err);
     }
   };
 

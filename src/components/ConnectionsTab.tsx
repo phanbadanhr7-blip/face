@@ -9,7 +9,10 @@ import {
   SlidersHorizontal,
   ExternalLink,
   ShieldCheck,
-  Facebook
+  Facebook,
+  KeyRound,
+  Sparkles,
+  AlertCircle
 } from "lucide-react";
 
 interface ConnectionsTabProps {
@@ -30,15 +33,19 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
   const [showAddModal, setShowAddModal] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [inputToken, setInputToken] = useState("");
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [activeModalTab, setActiveModalTab] = useState<"oauth" | "token" | "manual">("oauth");
 
-  // Form State
+  // Manual Form State
   const [pageName, setPageName] = useState("");
   const [pageId, setPageId] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [avatarUrl, setAvatarUrl] = useState(STOCK_AVATARS[0]);
   const [isDefault, setIsDefault] = useState(false);
 
-  const handleFacebookLogin = async () => {
+  const handleFacebookLogin = async (openInNewTab: boolean = false) => {
     try {
       setAuthLoading(true);
       
@@ -49,9 +56,15 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
       }
       const { url } = await response.json();
 
+      if (openInNewTab) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+        setAuthLoading(false);
+        return;
+      }
+
       // 2. Open popup
-      const width = 500;
-      const height = 650;
+      const width = 550;
+      const height = 700;
       const left = window.screenX + (window.outerWidth - width) / 2;
       const top = window.screenY + (window.outerHeight - height) / 2;
       
@@ -62,13 +75,55 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
       );
 
       if (!authWindow) {
-        alert('Trình duyệt đã chặn cửa sổ bật lên. Vui lòng cho phép bật lên để đăng nhập Facebook!');
-        setAuthLoading(false);
+        // Fallback to opening in new tab if popup is blocked
+        window.open(url, '_blank', 'noopener,noreferrer');
       }
     } catch (err) {
       console.error("Facebook Login Error:", err);
       alert("Đã xảy ra lỗi khi khởi tạo đăng nhập Facebook.");
-      setAuthLoading(false);
+    } finally {
+      setTimeout(() => setAuthLoading(false), 2000);
+    }
+  };
+
+  // Auto scan pages from access token
+  const handleScanToken = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputToken.trim()) return;
+
+    try {
+      setScanLoading(true);
+      setScanError(null);
+
+      const res = await fetch("/api/facebook/inspect-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: inputToken.trim() })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.pages || data.pages.length === 0) {
+        throw new Error(data.error || "Không tìm thấy trang Fanpage nào từ mã Token này.");
+      }
+
+      // Add each discovered page
+      data.pages.forEach((p: any, index: number) => {
+        onAddPage({
+          id: p.id,
+          name: p.name,
+          accessToken: p.accessToken,
+          picture: p.picture,
+          isDefault: index === 0 && pages.length === 0,
+        });
+      });
+
+      alert(`Kết nối thành công! Đã tự động thêm ${data.pages.length} trang Facebook.`);
+      setInputToken("");
+      setShowAddModal(false);
+    } catch (err: any) {
+      setScanError(err.message || "Lỗi kiểm tra mã Token.");
+    } finally {
+      setScanLoading(false);
     }
   };
 
@@ -85,7 +140,7 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
             name: p.name,
             accessToken: p.accessToken,
             picture: p.picture,
-            isDefault: index === 0 && pages.length === 0, // Set first page as default if no pages existed
+            isDefault: index === 0 && pages.length === 0,
           });
         });
         alert(`Đăng nhập thành công! Đã tự động kết nối ${importedPages.length} trang Facebook.`);
@@ -96,7 +151,6 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
 
     // 1. PostMessage listener
     const handleMessage = (event: MessageEvent) => {
-      // Validate origin - support same-origin, local development, and cloud run/AI studio domains
       const origin = event.origin;
       const isAllowedOrigin = 
         origin === window.location.origin ||
@@ -107,9 +161,7 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
         origin.endsWith('.googleusercontent.com') ||
         origin.endsWith('.aistudio.google');
 
-      if (!isAllowedOrigin) {
-        return;
-      }
+      if (!isAllowedOrigin) return;
 
       if (event.data?.type === 'FB_AUTH_SUCCESS') {
         const importedPages = event.data.pages || [];
@@ -128,7 +180,7 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
         }
       };
     } catch (e) {
-      console.warn("BroadcastChannel not supported in this environment:", e);
+      console.warn("BroadcastChannel error:", e);
     }
 
     // 3. LocalStorage storage event listener fallback
@@ -138,7 +190,6 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
           const data = JSON.parse(event.newValue);
           if (data && data.pages) {
             processImportedPages(data.pages);
-            // Clear storage key
             localStorage.removeItem('fb_auth_success');
           }
         } catch (e) {
@@ -153,9 +204,7 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
     return () => {
       window.removeEventListener('message', handleMessage);
       window.removeEventListener('storage', handleStorageChange);
-      if (bc) {
-        bc.close();
-      }
+      if (bc) bc.close();
     };
   }, [pages, onAddPage]);
 
@@ -165,7 +214,7 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmitManual = (e: React.FormEvent) => {
     e.preventDefault();
     if (!pageName.trim() || !pageId.trim()) return;
 
@@ -177,7 +226,6 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
       isDefault: isDefault,
     });
 
-    // Reset Form
     setPageName("");
     setPageId("");
     setAccessToken("");
@@ -196,18 +244,22 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
         </div>
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => setShowAddModal(true)}
+            onClick={() => { setActiveModalTab("oauth"); setShowAddModal(true); }}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Kết Nối Kênh Mới</span>
           </button>
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer"
+          <a
+            href="https://ais-dev-qv2ignianzzncmdt66dz5z-876098673256.asia-southeast1.run.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-sm font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Mở ứng dụng ở Tab trình duyệt độc lập để tránh bị chặn OAuth bởi iframe"
           >
-            Thêm Hồ Sơ
-          </button>
+            <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+            <span>Mở Tab Riêng</span>
+          </a>
         </div>
       </div>
 
@@ -248,134 +300,106 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
             {/* Card Header */}
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-blue-600 rounded-md text-white">
-                  <Facebook className="w-4 h-4 fill-white text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-xs text-slate-800">Facebook</h3>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                    <span className="text-[10px] font-medium text-emerald-600 uppercase tracking-wider">đã kết nối</span>
-                  </div>
-                </div>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-50"></span>
+                <span className="text-xs font-semibold text-emerald-700">Đang hoạt động</span>
               </div>
-              <button className="p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
-                <Info className="w-4 h-4" />
-              </button>
+              {page.isDefault ? (
+                <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-[11px] font-bold rounded-full border border-blue-100">
+                  Mặc định
+                </span>
+              ) : (
+                <button
+                  onClick={() => onSetDefaultPage(page.id)}
+                  className="text-xs text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
+                >
+                  Đặt mặc định
+                </button>
+              )}
             </div>
 
             {/* Card Body */}
-            <div className="p-4 flex-1">
-              <div className="flex items-start gap-3">
+            <div className="p-5 flex-1 space-y-4">
+              <div className="flex items-center gap-3.5">
                 <img 
                   src={page.picture} 
                   alt={page.name} 
-                  className="w-12 h-12 rounded-lg object-cover border border-slate-100"
-                  onError={(e) => {
-                    // Fallback avatar
-                    e.currentTarget.src = "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=150&auto=format&fit=crop&q=60";
-                  }}
+                  className="w-12 h-12 rounded-full object-cover border border-slate-200 shadow-2xs"
                 />
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-slate-800 text-sm leading-tight">{page.name}</h4>
-                    {page.isDefault && (
-                      <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded">
-                        Mặc định
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-1.5 text-xs text-blue-600 font-medium">
-                    <span>{page.name}</span>
-                    <span className="text-slate-300">·</span>
-                    <span className="text-slate-400 font-normal">ID: {page.id.substring(0, 8)}...</span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-slate-900 text-base truncate">{page.name}</h3>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
+                    <span className="truncate">ID: {page.id}</span>
                     <button 
                       onClick={() => handleCopyId(page.id)}
-                      className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
-                      title="Sao chép ID Trang"
+                      className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                      title="Sao chép ID"
                     >
                       {copiedId === page.id ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                     </button>
                   </div>
-                  
-                  <p className="text-[10px] text-slate-400">Kết nối lúc: {new Date(page.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
 
-              {/* Status details */}
-              <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 space-y-1.5">
-                <div className="flex justify-between">
-                  <span>Mã truy cập trang (Token):</span>
-                  <span className="font-mono text-[10px] text-slate-400">
-                    {page.accessToken ? "••••••••••••" + page.accessToken.substring(page.accessToken.length - 4) : "Mã Demo/Mô phỏng"}
-                  </span>
+              <div className="p-3 bg-slate-50 rounded-lg space-y-1.5 border border-slate-100 text-xs">
+                <div className="flex items-center justify-between text-slate-500">
+                  <span>Loại kết nối:</span>
+                  <span className="font-medium text-slate-700">Facebook Graph API v18.0</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Quyền đăng tải bài viết:</span>
-                  <span className="text-emerald-600 font-medium flex items-center gap-0.5">
-                    <ShieldCheck className="w-3 h-3" /> Đang hoạt động
-                  </span>
+                <div className="flex items-center justify-between text-slate-500">
+                  <span>Trạng thái Token:</span>
+                  <span className="font-semibold text-emerald-600">Đã kích hoạt</span>
                 </div>
               </div>
             </div>
 
-            {/* Card Actions */}
-            <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
+            {/* Card Footer */}
+            <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/30">
               <button 
-                onClick={() => onSetDefaultPage(page.id)}
-                className={`text-xs px-2.5 py-1.5 font-semibold rounded-lg border transition-all ${
-                  page.isDefault 
-                    ? "bg-slate-100 text-slate-500 border-transparent" 
-                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer"
-                }`}
-                disabled={page.isDefault}
+                onClick={() => onDisconnectPage(page.id)}
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-transparent hover:border-rose-100 transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
               >
-                {page.isDefault ? "Kênh Mặc Định" : "Đặt Mặc Định"}
+                <Trash2 className="w-4 h-4" />
+                <span>Ngắt kết nối</span>
               </button>
-              
-              <div className="flex items-center gap-1.5">
-                <button className="text-xs px-2.5 py-1.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 font-semibold rounded-lg transition-all cursor-pointer">
-                  Quản lý nội dung
-                </button>
-                <button 
-                  onClick={() => onDisconnectPage(page.id)}
-                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-transparent hover:border-rose-100 transition-all cursor-pointer"
-                  title="Ngắt kết nối trang"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
             </div>
           </div>
         ))}
 
         {pages.length === 0 && (
-          <div className="col-span-full bg-white border border-slate-200 rounded-xl p-10 flex flex-col items-center justify-center text-center space-y-4">
+          <div className="col-span-full bg-white border border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center text-center space-y-4">
             <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center border border-slate-100">
-              <Facebook className="w-8 h-8 text-blue-600 animate-pulse" />
+              <Facebook className="w-8 h-8 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-slate-800 text-base">Chưa cấu hình kênh kết nối</h3>
-              <p className="text-sm text-slate-500 max-w-sm mt-1">
-                Đăng nhập tài khoản Facebook của bạn để tự động liên kết nhanh tất cả các trang bạn quản lý, hoặc điền thông tin thủ công.
+              <h3 className="font-semibold text-slate-800 text-base">Chưa cấu hình kênh kết nối Facebook</h3>
+              <p className="text-sm text-slate-500 max-w-md mt-1">
+                Liên kết tài khoản Facebook để quản trị Fanpage và xuất bản bài viết tự động.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl pt-2">
               <button 
-                onClick={handleFacebookLogin}
+                onClick={() => handleFacebookLogin(true)}
                 disabled={authLoading}
-                className="px-5 py-2.5 bg-[#1877F2] hover:bg-[#1565C0] text-white rounded-lg text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:bg-slate-300"
+                className="p-3.5 bg-[#1877F2] hover:bg-[#1565C0] text-white rounded-xl text-xs font-bold shadow-xs transition-all flex flex-col items-center justify-center gap-2 cursor-pointer"
               >
-                <Facebook className="w-4 h-4 fill-current" />
-                <span>{authLoading ? "Đang kết nối..." : "Đăng nhập Facebook (Kết nối nhanh)"}</span>
+                <Facebook className="w-5 h-5 fill-current" />
+                <span>Đăng nhập Facebook (Tab Mới)</span>
+              </button>
+
+              <button 
+                onClick={() => { setActiveModalTab("token"); setShowAddModal(true); }}
+                className="p-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold shadow-2xs transition-all flex flex-col items-center justify-center gap-2 cursor-pointer"
+              >
+                <KeyRound className="w-5 h-5 text-emerald-600" />
+                <span>Nhập Access Token (1 Click)</span>
               </button>
               
               <button 
-                onClick={() => setShowAddModal(true)}
-                className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-sm font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                onClick={() => { setActiveModalTab("manual"); setShowAddModal(true); }}
+                className="p-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold shadow-2xs transition-all flex flex-col items-center justify-center gap-2 cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5 text-slate-500" />
                 <span>Cấu hình thủ công</span>
               </button>
             </div>
@@ -383,142 +407,248 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
         )}
       </div>
 
-      {/* New Connection Modal */}
+      {/* Modal Add Connection */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-lg w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-slate-900 text-lg">Kết Nối Trang Facebook</h3>
-                <p className="text-xs text-slate-500">Cung cấp thông tin để đăng tải bài viết trực tiếp lên Facebook</p>
+                <p className="text-xs text-slate-500">Chọn phương thức liên kết tiện lợi nhất cho bạn</p>
               </div>
               <button 
                 onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-semibold p-1"
+                className="text-slate-400 hover:text-slate-600 font-semibold p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            {/* Quick Login Section */}
-            <div className="px-5 pt-4 pb-1 border-b border-slate-100 bg-blue-50/40">
-              <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-2xs space-y-2">
-                <p className="text-[11px] font-semibold text-blue-800 flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Kết nối cực nhanh qua Đăng nhập Facebook
-                </p>
-                <button 
-                  type="button"
-                  onClick={handleFacebookLogin}
-                  disabled={authLoading}
-                  className="w-full py-2 bg-[#1877F2] hover:bg-[#1565C0] text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:bg-slate-300"
-                >
-                  <Facebook className="w-3.5 h-3.5 fill-current" />
-                  <span>{authLoading ? "Đang kết nối..." : "Đăng nhập bằng Facebook"}</span>
-                </button>
-              </div>
-              <div className="relative flex py-3.5 items-center">
-                <div className="flex-grow border-t border-slate-100"></div>
-                <span className="flex-shrink mx-3 text-[9px] text-slate-400 font-bold uppercase tracking-wider">Hoặc nhập thủ công</span>
-                <div className="flex-grow border-t border-slate-100"></div>
-              </div>
+            {/* Tab Selector */}
+            <div className="flex border-b border-slate-100 bg-slate-50/40 p-1.5 gap-1.5">
+              <button
+                onClick={() => setActiveModalTab("oauth")}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  activeModalTab === "oauth" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <Facebook className="w-3.5 h-3.5 fill-current" />
+                <span>Đăng nhập OAuth</span>
+              </button>
+              <button
+                onClick={() => setActiveModalTab("token")}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  activeModalTab === "token" ? "bg-white text-emerald-600 shadow-xs" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Quét mã Token</span>
+              </button>
+              <button
+                onClick={() => setActiveModalTab("manual")}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  activeModalTab === "manual" ? "bg-white text-slate-800 shadow-xs" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Thủ công</span>
+              </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                  Tên Trang (Fanpage) *
-                </label>
-                <input 
-                  type="text" 
-                  value={pageName}
-                  onChange={(e) => setPageName(e.target.value)}
-                  placeholder="Ví dụ: Máy Tính Mũi Né" 
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500"
-                  required
-                />
-              </div>
+            {/* TAB 1: OAuth Login */}
+            {activeModalTab === "oauth" && (
+              <div className="p-6 space-y-4">
+                <div className="p-4 bg-blue-50/70 border border-blue-100 rounded-xl space-y-2">
+                  <h4 className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-blue-600" />
+                    Đăng nhập tài khoản Facebook
+                  </h4>
+                  <p className="text-xs text-blue-700/90 leading-relaxed">
+                    Hệ thống sẽ mở trang đăng nhập chính thức của Facebook. Hãy nhấn cho phép để ứng dụng tự động nhận diện tất cả các Fanpage mà bạn đang quản lý.
+                  </p>
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                  Facebook Page ID *
-                </label>
-                <input 
-                  type="text" 
-                  value={pageId}
-                  onChange={(e) => setPageId(e.target.value)}
-                  placeholder="Ví dụ: 10248591837582" 
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500"
-                  required
-                />
-                <p className="text-[10px] text-slate-400 mt-1">Tìm thấy trong mục giới thiệu hoặc thông tin chi tiết của Fanpage</p>
-              </div>
+                <div className="space-y-2.5 pt-2">
+                  <button 
+                    type="button"
+                    onClick={() => handleFacebookLogin(true)}
+                    disabled={authLoading}
+                    className="w-full py-3 bg-[#1877F2] hover:bg-[#1565C0] text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:bg-slate-300"
+                  >
+                    <Facebook className="w-4 h-4 fill-current" />
+                    <span>Mở đăng nhập Facebook (Tab Riêng - Khuyên dùng)</span>
+                  </button>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                  Mã Access Token của Trang (Không bắt buộc với Demo)
-                </label>
-                <input 
-                  type="password" 
-                  value={accessToken}
-                  onChange={(e) => setAccessToken(e.target.value)}
-                  placeholder="EAA..." 
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-hidden focus:border-blue-500"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Để trống để hoạt động ở <strong>chế độ Demo/Mô phỏng</strong>. Xem Hướng dẫn cấu hình để lấy token thật.
-                </p>
-              </div>
+                  <button 
+                    type="button"
+                    onClick={() => handleFacebookLogin(false)}
+                    disabled={authLoading}
+                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Mở cửa sổ nhỏ (Popup)</span>
+                  </button>
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                  Chọn ảnh đại diện thể loại Trang
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {STOCK_AVATARS.map((url, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setAvatarUrl(url)}
-                      className={`relative rounded-lg overflow-hidden border-2 h-12 w-full transition-all cursor-pointer ${
-                        avatarUrl === url ? "border-blue-600 scale-95" : "border-transparent"
-                      }`}
-                    >
-                      <img src={url} alt={`Avatar ${i}`} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-[11px] text-amber-800 space-y-1">
+                  <p className="font-semibold flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                    Lưu ý về môi trường AI Studio:
+                  </p>
+                  <p className="text-amber-700">
+                    Nếu bạn gặp lỗi Google 403, đó là do khung preview iframe của AI Studio chặn popup. Hãy chọn <strong>"Mở đăng nhập Facebook (Tab Riêng)"</strong> hoặc chuyển sang tab <strong>"Quét mã Token"</strong> ở trên!
+                  </p>
                 </div>
               </div>
+            )}
 
-              <div className="flex items-center gap-2 pt-2">
-                <input 
-                  type="checkbox" 
-                  id="set-default"
-                  checked={isDefault}
-                  onChange={(e) => setIsDefault(e.target.checked)}
-                  className="accent-blue-600"
-                />
-                <label htmlFor="set-default" className="text-xs font-medium text-slate-700 select-none cursor-pointer">
-                  Đặt trang này làm kênh đăng mặc định
-                </label>
-              </div>
+            {/* TAB 2: Token Auto Scanner */}
+            {activeModalTab === "token" && (
+              <form onSubmit={handleScanToken} className="p-6 space-y-4">
+                <div className="p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-xs text-emerald-800 space-y-1.5">
+                  <p className="font-bold flex items-center gap-1.5 text-emerald-900">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    Tự động nhận diện Trang từ Token
+                  </p>
+                  <p className="leading-relaxed">
+                    Bạn chỉ cần dán <strong>User Token</strong> hoặc <strong>Page Token</strong> lấy từ <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noreferrer" className="underline font-bold text-emerald-950">Graph API Explorer</a>, hệ thống sẽ tự động quét và thêm tất cả Fanpage trong 1 click.
+                  </p>
+                </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-                <button 
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition-colors cursor-pointer"
-                >
-                  Hủy bỏ
-                </button>
-                <button 
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-xs cursor-pointer"
-                >
-                  Lưu Kết Nối
-                </button>
-              </div>
-            </form>
+                {scanError && (
+                  <div className="p-3 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                    <span>{scanError}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Dán mã Access Token Facebook
+                  </label>
+                  <textarea
+                    value={inputToken}
+                    onChange={(e) => setInputToken(e.target.value)}
+                    rows={3}
+                    placeholder="EAA..."
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs font-mono focus:outline-hidden focus:border-emerald-500"
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button 
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl cursor-pointer"
+                  >
+                    Hủy
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={scanLoading || !inputToken.trim()}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer disabled:bg-slate-300"
+                  >
+                    {scanLoading ? "Đang quét..." : "Quét & Thêm Fanpage Ngay"}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* TAB 3: Manual Form */}
+            {activeModalTab === "manual" && (
+              <form onSubmit={handleSubmitManual} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Tên Trang (Fanpage) *
+                  </label>
+                  <input 
+                    type="text" 
+                    value={pageName}
+                    onChange={(e) => setPageName(e.target.value)}
+                    placeholder="Ví dụ: Máy Tính Mũi Né" 
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Facebook Page ID *
+                  </label>
+                  <input 
+                    type="text" 
+                    value={pageId}
+                    onChange={(e) => setPageId(e.target.value)}
+                    placeholder="Ví dụ: 10248591837582" 
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Mã Access Token của Trang
+                  </label>
+                  <input 
+                    type="password" 
+                    value={accessToken}
+                    onChange={(e) => setAccessToken(e.target.value)}
+                    placeholder="EAA..." 
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Chọn ảnh đại diện
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {STOCK_AVATARS.map((url, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setAvatarUrl(url)}
+                        className={`relative rounded-lg overflow-hidden border-2 h-12 w-full transition-all cursor-pointer ${
+                          avatarUrl === url ? "border-blue-600 scale-95" : "border-transparent"
+                        }`}
+                      >
+                        <img src={url} alt={`Avatar ${i}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <input 
+                    type="checkbox" 
+                    id="set-default"
+                    checked={isDefault}
+                    onChange={(e) => setIsDefault(e.target.checked)}
+                    className="accent-blue-600"
+                  />
+                  <label htmlFor="set-default" className="text-xs font-medium text-slate-700 select-none cursor-pointer">
+                    Đặt làm trang mặc định khi xuất bản bài viết
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+                  <button 
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl cursor-pointer"
+                  >
+                    Hủy
+                  </button>
+                  <button 
+                    type="submit"
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
+                  >
+                    Lưu Trang
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
