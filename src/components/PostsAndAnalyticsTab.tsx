@@ -45,6 +45,7 @@ interface PostsAndAnalyticsTabProps {
   posts: FacebookPost[];
   onPublishNow: (id: string) => Promise<void>;
   onDeletePost: (id: string) => void;
+  onSyncPostMetrics?: (id: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 // Analytics timeline data
@@ -73,7 +74,8 @@ export default function PostsAndAnalyticsTab({
   pages,
   posts,
   onPublishNow,
-  onDeletePost
+  onDeletePost,
+  onSyncPostMetrics
 }: PostsAndAnalyticsTabProps) {
   // Main view switcher: 'posts' (Tất cả bài viết & Chỉ số tiếp cận), 'overview' (Biểu đồ tổng quan), 'schedule' (Lịch đăng)
   const [activeSubTab, setActiveSubTab] = useState<'posts' | 'overview' | 'schedule'>('posts');
@@ -84,6 +86,7 @@ export default function PostsAndAnalyticsTab({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [processingPostId, setProcessingPostId] = useState<string | null>(null);
+  const [syncingPostId, setSyncingPostId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Selected page for Chart Overview
@@ -143,6 +146,23 @@ export default function PostsAndAnalyticsTab({
       console.error(err);
     } finally {
       setProcessingPostId(null);
+    }
+  };
+
+  const handleSyncSinglePost = async (id: string) => {
+    if (!onSyncPostMetrics) return;
+    setSyncingPostId(id);
+    try {
+      const result = await onSyncPostMetrics(id);
+      if (result.success) {
+        alert("Đồng bộ chỉ số từ Facebook Page thật thành công!");
+      } else {
+        alert(result.error || "Không thể đồng bộ chỉ số.");
+      }
+    } catch (err: any) {
+      alert("Đồng bộ thất bại: " + (err.message || "Lỗi mạng."));
+    } finally {
+      setSyncingPostId(null);
     }
   };
 
@@ -587,15 +607,28 @@ export default function PostsAndAnalyticsTab({
                         )}
 
                         {post.fbPostId && (
-                          <a
-                            href={`https://facebook.com/${post.fbPostId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                            title="Xem bài viết trực tiếp trên Facebook"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
+                          <div className="flex items-center gap-1">
+                            {onSyncPostMetrics && (
+                              <button
+                                type="button"
+                                onClick={() => handleSyncSinglePost(post.id)}
+                                disabled={syncingPostId === post.id}
+                                className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
+                                title="Đồng bộ chỉ số thực tế từ Facebook Page"
+                              >
+                                <RefreshCw className={`w-4 h-4 ${syncingPostId === post.id ? "animate-spin text-emerald-600" : ""}`} />
+                              </button>
+                            )}
+                            <a
+                              href={`https://facebook.com/${post.fbPostId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                              title="Xem bài viết trực tiếp trên Facebook"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          </div>
                         )}
 
                         <button

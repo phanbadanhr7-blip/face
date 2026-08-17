@@ -975,6 +975,77 @@ app.get("/auth/facebook/callback", async (req: Request, res: Response) => {
   }
 });
 
+// API to sync metrics for a specific post with Facebook Graph API in real-time
+app.post("/api/facebook/sync-metrics", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { postId, accessToken } = req.body;
+    if (!postId || !accessToken) {
+      res.status(400).json({ error: "Mã bài viết (Post ID) và Mã truy cập (Access Token) là bắt buộc." });
+      return;
+    }
+
+    // Prepare default counters
+    let likesCount = 0;
+    let commentsCount = 0;
+    let sharesCount = 0;
+    let viewsCount = 0;
+    let reachCount = 0;
+
+    // 1. Fetch basic metrics (Reactions, Comments, Shares) which always succeed and do not require special read_insights permission
+    const basicFields = "reactions.summary(total_count),comments.summary(true).limit(0),shares";
+    const fbUrl = `https://graph.facebook.com/v18.0/${encodeURIComponent(postId)}?fields=${encodeURIComponent(basicFields)}&access_token=${encodeURIComponent(accessToken)}`;
+    
+    console.log(`Syncing basic metrics for Facebook Post ID: ${postId}...`);
+    const fbRes = await fetch(fbUrl);
+    const fbData: any = await fbRes.json();
+
+    if (fbRes.ok && !fbData.error) {
+      likesCount = fbData.reactions?.summary?.total_count ?? 0;
+      commentsCount = fbData.comments?.summary?.total_count ?? 0;
+      sharesCount = fbData.shares?.count ?? 0;
+
+      // 2. Fetch page insights (Impressions, Reach) in a separate try-catch so it won't crash if read_insights permission is missing
+      try {
+        const insightsUrl = `https://graph.facebook.com/v18.0/${encodeURIComponent(postId)}/insights?metric=post_impressions,post_impressions_unique&access_token=${encodeURIComponent(accessToken)}`;
+        const insightsRes = await fetch(insightsUrl);
+        const insightsData: any = await insightsRes.json();
+        
+        if (insightsRes.ok && insightsData.data) {
+          const insightsList = insightsData.data || [];
+          const impressionsItem = insightsList.find((item: any) => item.name === "post_impressions");
+          const reachItem = insightsList.find((item: any) => item.name === "post_impressions_unique");
+
+          if (impressionsItem && impressionsItem.values && impressionsItem.values[0]) {
+            viewsCount = impressionsItem.values[0].value ?? 0;
+          }
+          if (reachItem && reachItem.values && reachItem.values[0]) {
+            reachCount = reachItem.values[0].value ?? 0;
+          }
+        } else {
+          console.warn("Insights API returned error (safe to ignore, using default 0):", insightsData.error);
+        }
+      } catch (insightsErr) {
+        console.warn("Failed to fetch post insights:", insightsErr);
+      }
+
+      res.json({
+        success: true,
+        likesCount,
+        commentsCount,
+        sharesCount,
+        viewsCount,
+        reachCount
+      });
+    } else {
+      const errMsg = fbData.error?.message || "Không thể tải số liệu từ Meta API.";
+      res.status(400).json({ error: errMsg });
+    }
+  } catch (error: any) {
+    console.error("Error in sync-metrics endpoint:", error);
+    res.status(500).json({ error: error.message || "Lỗi máy chủ khi đồng bộ số liệu." });
+  }
+});
+
 // Configure Vite middleware or serve static files
 const startServer = async () => {
   if (process.env.NODE_ENV !== "production") {

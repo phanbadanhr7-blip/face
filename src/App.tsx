@@ -384,6 +384,56 @@ export default function App() {
     }
   };
 
+  const handleSyncPostMetrics = async (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post || !post.fbPostId) {
+      return { success: false, error: "Bài viết chưa được đăng hoặc thiếu ID Facebook." };
+    }
+
+    const page = pages.find(p => p.id === post.pageId);
+    const token = page?.accessToken || post.accessToken;
+    if (!token || token.startsWith("demo_")) {
+      return { success: false, error: "Đây là bài đăng mẫu hoặc Demo Mode. Chỉ bài viết thực tế trên Facebook mới có thể đồng bộ chỉ số thật!" };
+    }
+
+    try {
+      const res = await fetch("/api/facebook/sync-metrics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postId: post.fbPostId,
+          pageId: post.pageId,
+          accessToken: token
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        return { success: false, error: data.error || "Không thể tải số liệu từ Meta API." };
+      }
+
+      const updatedPost: FacebookPost = {
+        ...post,
+        viewsCount: data.viewsCount ?? 0,
+        reachCount: data.reachCount ?? 0,
+        likesCount: data.likesCount ?? 0,
+        commentsCount: data.commentsCount ?? 0,
+        sharesCount: data.sharesCount ?? 0,
+        clicksCount: data.clicksCount ?? post.clicksCount ?? 0
+      };
+
+      setPosts(prev => {
+        const next = prev.map(p => p.id === postId ? updatedPost : p);
+        setStoredPosts(next);
+        return next;
+      });
+      await savePostToFirestore(updatedPost);
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message || "Lỗi kết nối máy chủ khi đồng bộ." };
+    }
+  };
+
   // Render correct tab view
   const renderContent = () => {
     switch (activeTab) {
@@ -422,6 +472,7 @@ export default function App() {
             posts={posts}
             onPublishNow={handlePublishNow}
             onDeletePost={handleDeletePost}
+            onSyncPostMetrics={handleSyncPostMetrics}
           />
         );
       case "settings":
