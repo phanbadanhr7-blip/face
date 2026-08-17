@@ -125,6 +125,43 @@ export default function HelpGuideTab() {
 
       </div>
 
+      {/* Webhook Setup Guide Box */}
+      <div className="bg-white p-5 rounded-xl border border-blue-200/80 shadow-xs space-y-4 mt-6">
+        <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+          <Code className="w-4 h-4 text-blue-600" />
+          Cấu hình Webhooks Facebook (Nhận tin nhắn & Auto AI tức thì)
+        </h3>
+        
+        <p className="text-xs text-slate-600 leading-relaxed">
+          Để ứng dụng tự động nhận tin nhắn khách hàng gửi đến Fanpage theo thời gian thực mà không cần bấm F5 hoặc tải lại, bạn cấu hình Webhooks trong Meta Developer:
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">URL Gọi Lại (Callback URL)</span>
+            <div className="font-mono text-xs text-blue-700 bg-white p-2 border rounded border-slate-200 select-all break-all">
+              https://ais-dev-qv2ignianzzncmdt66dz5z-876098673256.asia-southeast1.run.app/api/webhooks/facebook
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Mã Xác Minh (Verify Token)</span>
+            <div className="font-mono text-xs text-emerald-700 bg-white p-2 border rounded border-slate-200 select-all">
+              maytinhmuine_secret_token_123
+            </div>
+          </div>
+        </div>
+
+        <div className="text-[11px] text-slate-500 bg-blue-50/50 p-3 rounded-lg border border-blue-100 space-y-1">
+          <p className="font-semibold text-blue-900">📌 Các trường cần đăng ký (Subscribed Fields):</p>
+          <ul className="list-disc list-inside space-y-0.5 text-slate-600">
+            <li><code className="text-blue-700 font-mono">messages</code> — Nhận tin nhắn chat của khách</li>
+            <li><code className="text-blue-700 font-mono">messaging_postbacks</code> — Nhận sự kiện bấm nút nhanh</li>
+            <li><code className="text-blue-700 font-mono">feed</code> — Nhận thông báo bình luận/bài viết mới</li>
+          </ul>
+        </div>
+      </div>
+
       {/* API Reference Box */}
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4 pt-6 mt-8">
         <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">

@@ -25,8 +25,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     { id: "connections", name: "Kết nối Trang", icon: Link2 },
     { id: "messenger", name: "Hộp thư Messenger", icon: Inbox },
     { id: "create-post", name: "Tạo bài viết AI", icon: Sparkles },
-    { id: "post-queue", name: "Hàng đợi & Lịch đăng", icon: FileText },
-    { id: "analytics", name: "Thống kê & Báo cáo", icon: BarChart3 },
+    { id: "posts-analytics", name: "Quản lý & Thống kê Bài viết", icon: BarChart3 },
     { id: "api-guide", name: "Hướng dẫn Cấu hình", icon: Key },
   ];
 

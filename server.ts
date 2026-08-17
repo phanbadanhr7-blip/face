@@ -57,7 +57,7 @@ app.post("/api/gemini/generate", async (req: Request, res: Response): Promise<vo
     }
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-3.1-flash-lite",
       contents: fullPrompt,
       config: {
         systemInstruction,
@@ -70,6 +70,120 @@ app.post("/api/gemini/generate", async (req: Request, res: Response): Promise<vo
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     res.status(500).json({ error: error.message || "Failed to generate content with AI." });
+  }
+});
+
+// API Endpoint to generate AI Images from natural language Vietnamese description
+app.post("/api/gemini/generate-image", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { prompt, style, aspectRatio } = req.body;
+
+    if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
+      res.status(400).json({ error: "Vui lòng nhập mô tả bức ảnh cần tạo." });
+      return;
+    }
+
+    let width = 1024;
+    let height = 1024;
+    if (aspectRatio === "16:9") {
+      width = 1280;
+      height = 720;
+    } else if (aspectRatio === "4:5") {
+      width = 960;
+      height = 1200;
+    } else if (aspectRatio === "9:16") {
+      width = 720;
+      height = 1280;
+    }
+
+    let enhancedEnglishPrompt = prompt;
+
+    // Use Gemini to enrich and translate the prompt into an expert visual prompt
+    if (ai) {
+      try {
+        const styleInstruction = style === "3d"
+          ? "3D render, Octane render, cinematic studio lighting, vibrant colors, unreal engine 5, 8k resolution, ultra detailed"
+          : style === "banner"
+          ? "professional advertising banner, bold commercial marketing style, sleek modern typography graphics background, high quality commercial photography"
+          : style === "cyberpunk"
+          ? "cyberpunk aesthetic, neon blue and magenta lighting, futuristic tech atmosphere, highly detailed, dramatic shadows"
+          : style === "art"
+          ? "digital art illustration, artistic masterpiece, vivid colors, modern graphic design"
+          : "ultra realistic commercial photography, 8k resolution, studio lighting, crisp focus, hyperdetailed";
+
+        const translateRes = await ai.models.generateContent({
+          model: "gemini-3.1-flash-lite",
+          contents: `You are an expert AI image prompt engineer. Convert and expand the following Vietnamese user image request into a single descriptive English prompt for text-to-image generation:
+User Request: "${prompt}"
+Desired Style: "${styleInstruction}"
+
+Rules:
+- Respond ONLY with the finalized English prompt (around 30-50 words).
+- Do not include explanations, quotes, or markdown.
+- Make it visual, descriptive, focusing on subject, lighting, colors, and camera angle.`,
+        });
+
+        if (translateRes.text && translateRes.text.trim()) {
+          enhancedEnglishPrompt = translateRes.text.trim();
+        }
+      } catch (e) {
+        console.warn("Prompt enhancement fallback:", e);
+      }
+    }
+
+    // Generate unique seed
+    const seed = Math.floor(Math.random() * 9999999);
+    const encoded = encodeURIComponent(enhancedEnglishPrompt);
+    const imageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&seed=${seed}&nologo=true&enhance=true`;
+
+    res.json({
+      success: true,
+      imageUrl,
+      enhancedPrompt: enhancedEnglishPrompt,
+      originalPrompt: prompt
+    });
+  } catch (error: any) {
+    console.error("AI Image Generation Error:", error);
+    res.status(500).json({ error: error.message || "Failed to generate AI image." });
+  }
+});
+
+// API Endpoint for Smart Content Tools (Headlines, CTAs, Tips, Sale transformation)
+app.post("/api/gemini/smart-tools", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { toolType, input, context } = req.body;
+
+    if (!ai) {
+      res.status(500).json({ error: "Gemini API is not configured." });
+      return;
+    }
+
+    let prompt = "";
+    if (toolType === "headlines") {
+      prompt = `Hãy tạo 5 tiêu đề / Hook mở đầu bài viết Facebook cực kỳ giật tít, hấp dẫn, tò mò, có chứa icon phù hợp về chủ đề sau:\n"${input}"\nChỉ trả về 5 dòng tiêu đề, mỗi dòng 1 tiêu đề bắt đầu bằng emoji.`;
+    } else if (toolType === "cta") {
+      prompt = `Hãy tạo 5 lời kêu gọi hành động (Call To Action - CTA) chốt đơn, kích thích khách hàng inbox, gọi hotline hoặc bình luận cho bài viết Facebook:\n"${input}"\nChỉ trả về 5 câu CTA mẫu ngắn gọn, chuyên nghiệp kèm icon chỉ tay, điện thoại, quà tặng.`;
+    } else if (toolType === "sales_transform") {
+      prompt = `Hãy viết lại nội dung sau đây thành một bài viết Bán hàng / Khuyến mãi cực kỳ kích thích, nổi bật ưu đãi, giới hạn số lượng, kèm bảo hành uy tín và kêu gọi mua ngay:\n"${input}"\nĐịnh dạng bài viết rõ ràng, gạch đầu dòng các quyền lợi, icon sinh động.`;
+    } else if (toolType === "tech_tip") {
+      prompt = `Hãy viết một bài viết Facebook chia sẻ Mẹo & Thủ thuật công nghệ hữu ích, dễ hiểu, giải quyết vấn đề cho người dùng máy tính / laptop về chủ đề:\n"${input}"\nCấu trúc gồm: Tiêu đề thu hút -> Nguyên nhân/Vấn đề -> Các bước thực hiện đơn giản -> Lời khuyên & thông tin hỗ trợ của Shop.`;
+    } else {
+      prompt = `Hãy tối ưu nội dung bài viết sau cho Facebook:\n"${input}"`;
+    }
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.1-flash-lite",
+      contents: prompt,
+      config: {
+        systemInstruction: "Bạn là chuyên gia sáng tạo nội dung hàng đầu cho các Fanpage công nghệ, bán lẻ và dịch vụ tại Việt Nam.",
+        temperature: 0.75,
+      },
+    });
+
+    res.json({ result: response.text?.trim() || "" });
+  } catch (error: any) {
+    console.error("Smart tools error:", error);
+    res.status(500).json({ error: error.message || "Failed to execute smart tool." });
   }
 });
 
@@ -114,15 +228,25 @@ ${historyStr}
 
 ${customInstructions ? `HƯỚNG DẪN CẤU HÌNH RIÊNG CHO AI:\n${customInstructions}\n` : ""}
 
-Yêu cầu phản hồi:
-- Hãy xưng hô lịch sự, thân mật bằng tiếng Việt (ví dụ: Dạ chào anh/chị ${customerName || "ạ"}, Dạ chào anh ${customerName}... ).
-- Trả lời trực tiếp, rõ ràng, nhiệt tình vào câu hỏi của họ.
-- Nếu là Page "May Tinh Mui Ne", hãy thể hiện tính chuyên nghiệp về công nghệ, sửa chữa máy tính, cài win giá sinh viên, nâng cấp SSD, ráp PC gaming, giá cả phải chăng, bảo hành uy tín tại Mũi Né/Phan Thiết.
-- Luôn kết thúc bằng một câu hỏi mở lịch sự hoặc lời mời để duy trì cuộc hội thoại (ví dụ: "Không biết mình muốn ráp máy tầm phân khúc bao nhiêu để em lên cấu hình chi tiết gửi mình tham khảo ạ?").
-- KHÔNG viết bất kỳ giải thích, nhãn tiêu đề hay ký hiệu markdown rườm rà. Chỉ trả về duy nhất nội dung tin nhắn sẽ gửi đi để copy trực tiếp.`;
+QUY TẮC PHẢN HỒI BẮT BUỘC:
+1. GIẢI QUYẾT TRỰC TIẾP TRÊN MESSENGER:
+- Với các câu chào hỏi ban đầu ("chào shop", "hi", "alo"), hỏi giờ mở cửa, hỏi bảng giá dịch vụ, hỏi cấu hình máy tính, bảo hành hoặc thông tin chung: Hãy tự tin trả lời trực tiếp, rõ ràng, nhiệt tình vào câu hỏi của họ.
+- Nếu là Page "May Tinh Mui Ne", hãy thể hiện tính chuyên nghiệp về công nghệ, sửa chữa máy tính, cài win giá sinh viên 100k, vệ sinh 150k, nâng cấp SSD, ráp PC gaming, giá cả phải chăng, bảo hành uy tín tại Mũi Né/Phan Thiết.
+- Kết thúc bằng một câu hỏi mở lịch sự để tiếp tục tư vấn (ví dụ: "Dạ không biết mình đang cần tư vấn máy tính dùng cho nhu cầu văn phòng hay chơi game ạ?").
+
+2. QUY TẮC ĐƯA LINK ZALO / SỐ ĐIỆN THOẠI (CỰC KỲ QUAN TRỌNG):
+- TUYỆT ĐỐI KHÔNG đưa link Zalo hay số điện thoại vào các câu chào hỏi thông thường hoặc các câu hỏi mà AI có thể giải đáp ngay.
+- CHỈ ĐƯỢC đưa link Zalo / Hotline khi rơi vào các trường hợp sau:
+  + Khách hàng chủ động hỏi số điện thoại, xin Zalo, xin hotline để gọi.
+  + Khách hàng có việc khẩn cấp (ví dụ: "cần gấp", "máy hỏng nặng cứu gấp", "gọi cho mình ngay").
+  + Vấn đề kỹ thuật quá phức tạp/chuyên sâu cần thợ kỹ thuật liên hệ trực tiếp hoặc gửi video/hình ảnh qua Zalo để kiểm tra tận nơi.
+
+3. HÌNH THỨC:
+- Xưng hô lịch sự, thân mật bằng tiếng Việt (Dạ chào anh/chị...).
+- KHÔNG viết bất kỳ giải thích, nhãn tiêu đề hay ký hiệu markdown rườm rà. Chỉ trả về duy nhất nội dung tin nhắn sẽ gửi đi.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-3.1-flash-lite",
       contents: `Hãy tạo tin nhắn phản hồi khách hàng tốt nhất cho câu hỏi: "${lastMessage}"`,
       config: {
         systemInstruction,
@@ -138,42 +262,397 @@ Yêu cầu phản hồi:
   }
 });
 
+// API Endpoint to get real Facebook Page Conversations (Graph API)
+app.get("/api/facebook/conversations", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { pageId, accessToken } = req.query;
+
+    if (!pageId || !accessToken) {
+      res.status(400).json({ error: "pageId and accessToken are required." });
+      return;
+    }
+
+    if (String(accessToken).startsWith("demo_") || String(accessToken).trim() === "") {
+      res.json({ success: true, threads: [], isMock: true });
+      return;
+    }
+
+    // Query Graph API for conversations
+    const graphUrl = `https://graph.facebook.com/v18.0/${pageId}/conversations?fields=id,snippet,updated_time,unread_count,participants,messages.limit(40){id,message,created_time,from}&access_token=${encodeURIComponent(String(accessToken))}`;
+    
+    const fbRes = await fetch(graphUrl);
+    const data: any = await fbRes.json();
+
+    if (!fbRes.ok || data.error) {
+      console.warn("Facebook Conversations API Notice:", data.error?.message || data.error);
+      
+      // If token expired or lacks pages_messaging permission, return a graceful error with action hint
+      const isPermissionOrTokenError = data.error?.code === 190 || data.error?.code === 200 || data.error?.type === "OAuthException";
+      
+      res.status(fbRes.status || 400).json({ 
+        success: false,
+        error: isPermissionOrTokenError
+          ? "Token Facebook đã hết hạn hoặc chưa được cấp quyền 'pages_messaging'. Vui lòng kết nối lại tài khoản Facebook hoặc cấp quyền nhắn tin."
+          : (data.error?.message || "Không thể tải danh sách hội thoại từ Facebook."),
+        errorDetail: data.error
+      });
+      return;
+    }
+
+    // Transform Graph API conversations into our ChatThread[] structure
+    const threads = (data.data || []).map((conv: any) => {
+      const rawMessages = conv.messages?.data || [];
+
+      // Find customer participant (not the page itself)
+      const customerParticipant = conv.participants?.data?.find((p: any) => String(p.id) !== String(pageId));
+      
+      // Find customer sender from messages
+      const customerFromMsg = rawMessages.find((m: any) => m.from && String(m.from.id) !== String(pageId))?.from;
+
+      const customerName = customerParticipant?.name || customerFromMsg?.name || "Khách hàng Messenger";
+      
+      // Extract raw PSID
+      const customerId = customerParticipant?.id || customerFromMsg?.id || (String(conv.id).startsWith("t_") ? conv.id.substring(2) : conv.id);
+
+      // Graph API returns messages newest first, reverse for chronological chat view
+      const messages = [...rawMessages].reverse().map((m: any) => ({
+        id: m.id,
+        senderId: m.from?.id || customerId,
+        senderName: m.from?.name || (m.from?.id === pageId ? "Fanpage" : customerName),
+        message: m.message || "",
+        timestamp: m.created_time || conv.updated_time,
+        isPage: m.from?.id === pageId
+      }));
+
+      return {
+        id: conv.id,
+        pageId: String(pageId),
+        customerId: customerId,
+        customerName: customerName,
+        customerAvatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80`,
+        lastMessage: conv.snippet || messages[messages.length - 1]?.message || "Đã nhận tin nhắn mới",
+        updatedAt: conv.updated_time || new Date().toISOString(),
+        isUnread: (conv.unread_count && conv.unread_count > 0) || false,
+        messages: messages
+      };
+    });
+
+    res.json({ success: true, threads });
+  } catch (err: any) {
+    console.error("Fetch conversations error:", err);
+    res.status(500).json({ error: err.message || "Failed to fetch conversations." });
+  }
+});
+
+// Webhook Verification (supports /api/webhooks/facebook, /api/webhook, /webhook, etc.)
+const handleWebhookVerification = (req: Request, res: Response) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  console.log("[WEBHOOK-VERIFY] Incoming verification request:", { mode, token, challenge });
+
+  // If challenge is present and mode is subscribe, verify immediately
+  if (challenge) {
+    console.log(">>> FACEBOOK_WEBHOOK_VERIFIED_SUCCESSFULLY! Challenge returned:", challenge);
+    res.status(200).send(challenge);
+    return;
+  }
+
+  res.status(200).send("Facebook Webhook Endpoint Active");
+};
+
+// Register GET routes for Webhook Verification
+app.get("/api/webhooks/facebook", handleWebhookVerification);
+app.get("/api/webhook/facebook", handleWebhookVerification);
+app.get("/api/webhooks", handleWebhookVerification);
+app.get("/api/webhook", handleWebhookVerification);
+app.get("/webhooks/facebook", handleWebhookVerification);
+app.get("/webhooks", handleWebhookVerification);
+app.get("/webhook", handleWebhookVerification);
+
+// In-memory received webhook messages cache
+let incomingWebhookEvents: any[] = [];
+
+// Webhook Event Receiver (POST /api/webhooks/facebook, /api/webhook, /webhook, etc.)
+const handleWebhookEvent = (req: Request, res: Response) => {
+  const body = req.body;
+  console.log("[WEBHOOK-EVENT] Received POST payload:", JSON.stringify(body, null, 2));
+
+  if (body.object === "page") {
+    body.entry?.forEach((entry: any) => {
+      // 1. Messaging events (Direct Messenger messages)
+      const webhookEvents = entry.messaging || [];
+      webhookEvents.forEach((webhookEvent: any) => {
+        console.log("[WEBHOOK-EVENT] Messenger message event:", webhookEvent);
+        incomingWebhookEvents.push({
+          pageId: entry.id,
+          senderId: webhookEvent.sender?.id,
+          recipientId: webhookEvent.recipient?.id,
+          timestamp: webhookEvent.timestamp,
+          message: webhookEvent.message?.text,
+          raw: webhookEvent,
+          receivedAt: new Date().toISOString()
+        });
+      });
+
+      // 2. Changes events (Feed, comments, post interactions)
+      const changes = entry.changes || [];
+      changes.forEach((change: any) => {
+        console.log("[WEBHOOK-EVENT] Page change event:", change);
+        incomingWebhookEvents.push({
+          pageId: entry.id,
+          field: change.field,
+          value: change.value,
+          receivedAt: new Date().toISOString()
+        });
+      });
+
+      if (incomingWebhookEvents.length > 200) {
+        incomingWebhookEvents = incomingWebhookEvents.slice(-200);
+      }
+    });
+
+    res.status(200).send("EVENT_RECEIVED");
+  } else {
+    // Acknowledge other event types with 200 OK
+    res.status(200).send("EVENT_RECEIVED");
+  }
+};
+
+// Register POST routes for Webhook Events
+app.post("/api/webhooks/facebook", handleWebhookEvent);
+app.post("/api/webhook/facebook", handleWebhookEvent);
+app.post("/api/webhooks", handleWebhookEvent);
+app.post("/api/webhook", handleWebhookEvent);
+app.post("/webhooks/facebook", handleWebhookEvent);
+app.post("/webhooks", handleWebhookEvent);
+app.post("/webhook", handleWebhookEvent);
+
+app.get("/api/webhook/events", (req: Request, res: Response) => {
+  res.json({ events: incomingWebhookEvents });
+});
+
 // API Endpoint to send Facebook Page Messenger Message (Real Graph API)
 app.post("/api/facebook/messages/send", async (req: Request, res: Response): Promise<void> => {
   try {
-    const { pageId, accessToken, recipientId, message } = req.body;
+    const { pageId, accessToken, recipientId, customerId, conversationId, message } = req.body;
 
-    if (!accessToken || accessToken.startsWith("demo_") || accessToken.trim() === "") {
-      res.json({ success: true, message: "Message sent (Simulated Mode)." });
+    if (!message || !message.trim()) {
+      res.status(400).json({ error: "Nội dung tin nhắn không được để trống." });
       return;
     }
 
-    console.log(`Sending live Facebook Messenger response as Page ${pageId} to recipient ${recipientId}...`);
+    const targetThreadOrUser = recipientId || customerId || conversationId;
 
-    // Standard Graph API reply endpoint for conversations:
-    // POST /v18.0/{conversation_id}/messages
-    const url = `https://graph.facebook.com/v18.0/${recipientId}/messages`;
-    const fbResponse = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: message,
-        access_token: accessToken
-      })
+    // Check for simulated/demo tokens or local demo threads (e.g. thread_1, mock_...)
+    const isMockThread = !targetThreadOrUser || 
+      String(targetThreadOrUser).startsWith("thread_") || 
+      String(targetThreadOrUser).startsWith("mock_") || 
+      String(targetThreadOrUser).startsWith("demo_") || 
+      String(targetThreadOrUser).startsWith("sim_") || 
+      String(targetThreadOrUser).startsWith("customer_");
+
+    if (isMockThread || !accessToken || accessToken.startsWith("demo_") || accessToken.trim() === "") {
+      res.json({ success: true, message: "Đã gửi tin nhắn (Chế độ mô phỏng).", isMock: true });
+      return;
+    }
+
+    console.log(`[FB-SEND] Sending message as Page ${pageId} to ${targetThreadOrUser} (customerId: ${customerId}, convId: ${conversationId})...`);
+
+    let fbMessageId: string | null = null;
+    let allErrors: any[] = [];
+
+    // 1. Separate pure PSIDs (numbers only) from Conversation Thread IDs (start with t_ or explicit conversationId)
+    const rawIds = [customerId, recipientId, targetThreadOrUser].filter(Boolean) as string[];
+    const purePSIDs: string[] = [];
+    rawIds.forEach(id => {
+      const clean = String(id).replace(/^t_/, "").trim();
+      // PSIDs on Facebook are pure numeric IDs
+      if (clean && /^\d+$/.test(clean) && !purePSIDs.includes(clean)) {
+        purePSIDs.push(clean);
+      }
     });
 
-    const data: any = await fbResponse.json();
-
-    if (!fbResponse.ok || data.error) {
-      console.error("Facebook Messenger Send API Error:", data.error);
-      res.status(fbResponse.status).json({ error: data.error?.message || "Failed to send Messenger message." });
-      return;
+    const conversationThreadIDs: string[] = [];
+    if (conversationId && !conversationThreadIDs.includes(conversationId)) {
+      conversationThreadIDs.push(conversationId);
+    }
+    if (targetThreadOrUser && String(targetThreadOrUser).startsWith("t_") && !conversationThreadIDs.includes(String(targetThreadOrUser))) {
+      conversationThreadIDs.push(String(targetThreadOrUser));
     }
 
-    res.json({ success: true, fbMessageId: data.id });
+    console.log(`[FB-SEND] Identified purePSIDs:`, purePSIDs, `conversationThreadIDs:`, conversationThreadIDs);
+
+    // Strategy 1: Messenger Send API POST /me/messages (RESPONSE - standard 24h window)
+    for (const psid of purePSIDs) {
+      if (fbMessageId) break;
+
+      // 1a. Standard RESPONSE messaging_type
+      try {
+        const sendRes = await fetch(`https://graph.facebook.com/v18.0/me/messages?access_token=${encodeURIComponent(accessToken)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recipient: { id: psid },
+            message: { text: message.trim() },
+            messaging_type: "RESPONSE"
+          })
+        });
+        const sendData: any = await sendRes.json();
+        if (sendRes.ok && (sendData.message_id || sendData.recipient_id)) {
+          fbMessageId = sendData.message_id || sendData.recipient_id;
+          console.log(`[FB-SEND] Success via /me/messages (RESPONSE) with PSID ${psid}:`, fbMessageId);
+          break;
+        } else {
+          allErrors.push({ method: `/me/messages RESPONSE (${psid})`, error: sendData.error });
+        }
+      } catch (e: any) {
+        allErrors.push({ method: `/me/messages RESPONSE (${psid})`, error: e.message });
+      }
+
+      // 1b. Direct payload (without messaging_type)
+      if (!fbMessageId) {
+        try {
+          const sendRes = await fetch(`https://graph.facebook.com/v18.0/me/messages?access_token=${encodeURIComponent(accessToken)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recipient: { id: psid },
+              message: { text: message.trim() }
+            })
+          });
+          const sendData: any = await sendRes.json();
+          if (sendRes.ok && (sendData.message_id || sendData.recipient_id)) {
+            fbMessageId = sendData.message_id || sendData.recipient_id;
+            console.log(`[FB-SEND] Success via /me/messages (direct) with PSID ${psid}:`, fbMessageId);
+            break;
+          } else {
+            allErrors.push({ method: `/me/messages direct (${psid})`, error: sendData.error });
+          }
+        } catch (e: any) {
+          allErrors.push({ method: `/me/messages direct (${psid})`, error: e.message });
+        }
+      }
+
+      // 1c. Send via /{pageId}/messages endpoint
+      if (!fbMessageId && pageId) {
+        try {
+          const sendRes = await fetch(`https://graph.facebook.com/v18.0/${pageId}/messages?access_token=${encodeURIComponent(accessToken)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recipient: { id: psid },
+              message: { text: message.trim() },
+              messaging_type: "RESPONSE"
+            })
+          });
+          const sendData: any = await sendRes.json();
+          if (sendRes.ok && (sendData.message_id || sendData.recipient_id)) {
+            fbMessageId = sendData.message_id || sendData.recipient_id;
+            console.log(`[FB-SEND] Success via /${pageId}/messages with PSID ${psid}:`, fbMessageId);
+            break;
+          } else {
+            allErrors.push({ method: `/${pageId}/messages (${psid})`, error: sendData.error });
+          }
+        } catch (e: any) {
+          allErrors.push({ method: `/${pageId}/messages (${psid})`, error: e.message });
+        }
+      }
+
+      // 1d. If outside 24h window, attempt supported tags: HUMAN_AGENT or POST_PURCHASE_UPDATE
+      if (!fbMessageId) {
+        // Try HUMAN_AGENT tag (gives 7-day window if approved/eligible)
+        try {
+          const sendRes = await fetch(`https://graph.facebook.com/v18.0/me/messages?access_token=${encodeURIComponent(accessToken)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recipient: { id: psid },
+              message: { text: message.trim() },
+              messaging_type: "MESSAGE_TAG",
+              tag: "HUMAN_AGENT"
+            })
+          });
+          const sendData: any = await sendRes.json();
+          if (sendRes.ok && (sendData.message_id || sendData.recipient_id)) {
+            fbMessageId = sendData.message_id || sendData.recipient_id;
+            console.log(`[FB-SEND] Success via /me/messages (HUMAN_AGENT) with PSID ${psid}:`, fbMessageId);
+            break;
+          } else {
+            allErrors.push({ method: `/me/messages HUMAN_AGENT (${psid})`, error: sendData.error });
+          }
+        } catch (e: any) {
+          allErrors.push({ method: `/me/messages HUMAN_AGENT (${psid})`, error: e.message });
+        }
+      }
+    }
+
+    // Strategy 2: Conversation Thread Reply via POST /{thread_id}/messages (Form URL Encoded & JSON)
+    // ONLY executed for valid conversation thread IDs, never on raw PSIDs (to prevent subcode 33)
+    if (!fbMessageId && conversationThreadIDs.length > 0) {
+      for (const convThreadId of conversationThreadIDs) {
+        if (fbMessageId) break;
+
+        // 2a. Form URL Encoded
+        try {
+          const formParams = new URLSearchParams();
+          formParams.append("message", message.trim());
+          formParams.append("access_token", accessToken);
+
+          const convRes = await fetch(`https://graph.facebook.com/v18.0/${convThreadId}/messages`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formParams.toString()
+          });
+          const convData: any = await convRes.json();
+          if (convRes.ok && (convData.id || convData.message_id)) {
+            fbMessageId = convData.id || convData.message_id;
+            console.log(`[FB-SEND] Success via /${convThreadId}/messages (Form):`, fbMessageId);
+            break;
+          } else {
+            allErrors.push({ method: `POST /${convThreadId}/messages (Form)`, error: convData.error });
+          }
+        } catch (e: any) {
+          allErrors.push({ method: `POST /${convThreadId}/messages (Form)`, error: e.message });
+        }
+      }
+    }
+
+    if (fbMessageId) {
+      res.json({ success: true, fbMessageId });
+    } else {
+      console.warn("[FB-SEND] All sending methods failed:", JSON.stringify(allErrors, null, 2));
+      
+      const primaryError = allErrors.find(e => e.error?.message)?.error || allErrors[0]?.error;
+      const rawMessage = primaryError?.message || "";
+      const subcode = primaryError?.error_subcode || primaryError?.subcode;
+      const code = primaryError?.code;
+      let humanMessage = rawMessage || "Facebook không thể gửi tin nhắn phản hồi.";
+
+      // Interpret common Facebook API errors into clear, actionable advice
+      if (subcode === 2018001 || code === 10 || rawMessage.includes("outside of allowed window")) {
+        humanMessage = "Chính sách Cửa sổ 24 giờ của Meta: Đã quá 24 giờ kể từ tin nhắn gần nhất của khách hàng. Meta chỉ cho phép Fanpage gửi tin nhắn trả lời khi khách hàng chủ động gửi tin nhắn mới trước.";
+      } else if (subcode === 1893061 || subcode === 2018278 || rawMessage.includes("thẻ tin nhắn") || rawMessage.includes("message tag")) {
+        humanMessage = "Chính sách gửi tin nhắn ngoài 24 giờ: Meta yêu cầu khách hàng phải gửi tin nhắn mới vào Trang trước thì Trang mới có thể tiếp tục nhắn tin tự do.";
+      } else if (code === 190 || primaryError?.type === "OAuthException" && rawMessage.includes("token")) {
+        humanMessage = "Mã truy cập Facebook (Access Token) đã hết hạn hoặc bị thu hồi. Vui lòng kết nối lại tài khoản Facebook trong tab Kết Nối.";
+      } else if (code === 200 || rawMessage.includes("capability") || rawMessage.includes("permission") || rawMessage.includes("pages_messaging")) {
+        humanMessage = "Ứng dụng Facebook chưa được cấp quyền 'pages_messaging' hoặc đang ở chế độ Phát triển (Development). Ở chế độ này, bạn chỉ có thể gửi tin nhắn đến tài khoản Quản trị viên/Tester của ứng dụng.";
+      } else if (subcode === 33 || rawMessage.includes("Object with ID") && rawMessage.includes("does not exist")) {
+        humanMessage = "Không tìm thấy người nhận hoặc cuộc trò chuyện tương ứng trên Facebook.";
+      }
+      
+      res.status(400).json({ 
+        success: false,
+        error: humanMessage,
+        errorDetail: primaryError,
+        allErrors
+      });
+    }
   } catch (err: any) {
-    console.error("Live Messenger Send error:", err);
-    res.status(500).json({ error: err.message || "Network error while sending message." });
+    console.error("Live Messenger Send catch error:", err);
+    res.status(500).json({ success: false, error: err.message || "Lỗi kết nối khi gửi tin nhắn tới Facebook." });
   }
 });
 
@@ -318,7 +797,7 @@ app.get("/api/auth/facebook/url", (req: Request, res: Response) => {
   const redirectUri = `${host}/auth/facebook/callback`;
 
   if (appId) {
-    const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=pages_manage_posts,pages_read_engagement,pages_show_list`;
+    const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=pages_messaging,pages_manage_metadata,pages_manage_posts,pages_read_engagement,pages_show_list`;
     res.json({ url: authUrl, isLive: true, redirectUri });
   } else {
     res.json({ url: `${host}/auth/facebook/mock-login`, isLive: false, redirectUri });

@@ -20,6 +20,13 @@ export interface FacebookPost {
   status: 'draft' | 'scheduled' | 'published' | 'failed';
   error: string | null;
   fbPostId: string | null;
+  // Metrics for views, reach, likes, comments, shares
+  viewsCount?: number;
+  reachCount?: number;
+  likesCount?: number;
+  commentsCount?: number;
+  sharesCount?: number;
+  clicksCount?: number;
 }
 
 export interface AnalyticsData {
@@ -43,6 +50,7 @@ export interface ChatMessage {
 export interface ChatThread {
   id: string;
   pageId: string;
+  customerId?: string;
   customerName: string;
   customerAvatar: string;
   lastMessage: string;

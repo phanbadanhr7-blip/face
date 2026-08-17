@@ -377,30 +377,14 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl pt-2">
+            <div className="flex justify-center w-full max-w-sm pt-2">
               <button 
                 onClick={() => handleFacebookLogin(true)}
                 disabled={authLoading}
-                className="p-3.5 bg-[#1877F2] hover:bg-[#1565C0] text-white rounded-xl text-xs font-bold shadow-xs transition-all flex flex-col items-center justify-center gap-2 cursor-pointer"
+                className="w-full p-3.5 bg-[#1877F2] hover:bg-[#1565C0] text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Facebook className="w-5 h-5 fill-current" />
-                <span>Đăng nhập Facebook (Tab Mới)</span>
-              </button>
-
-              <button 
-                onClick={() => { setActiveModalTab("token"); setShowAddModal(true); }}
-                className="p-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold shadow-2xs transition-all flex flex-col items-center justify-center gap-2 cursor-pointer"
-              >
-                <KeyRound className="w-5 h-5 text-emerald-600" />
-                <span>Nhập Access Token (1 Click)</span>
-              </button>
-              
-              <button 
-                onClick={() => { setActiveModalTab("manual"); setShowAddModal(true); }}
-                className="p-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold shadow-2xs transition-all flex flex-col items-center justify-center gap-2 cursor-pointer"
-              >
-                <Plus className="w-5 h-5 text-slate-500" />
-                <span>Cấu hình thủ công</span>
+                <span>Đăng nhập bằng Facebook</span>
               </button>
             </div>
           </div>

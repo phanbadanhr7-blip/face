@@ -15,7 +15,14 @@ import {
   ShieldCheck,
   AlertCircle,
   PhoneCall,
-  ExternalLink
+  ExternalLink,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  HelpCircle,
+  Info,
+  Trash2,
+  X
 } from "lucide-react";
 import { FacebookPage, ChatThread, ChatMessage } from "../types";
 
@@ -153,12 +160,22 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
 
+  // Live Facebook Synchronization state
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [liveSyncError, setLiveSyncError] = useState<string | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const [showWebhookGuide, setShowWebhookGuide] = useState(false);
+
   // AI Autopilot / Auto-Reply state configurations
-  const [aiAutoreplyEnabled, setAiAutoreplyEnabled] = useState(false);
+  const [aiAutoreplyEnabled, setAiAutoreplyEnabled] = useState(true);
   const [aiPersona, setAiPersona] = useState<"sales" | "support" | "playful" | "standard">("standard");
   const [aiCustomInstructions, setAiCustomInstructions] = useState("");
   const [isAutoreplyThinking, setIsAutoreplyThinking] = useState(false);
   const [isAiConfigOpen, setIsAiConfigOpen] = useState(true);
+
+  // Thread deletion and clear inbox modal state
+  const [threadToDelete, setThreadToDelete] = useState<ChatThread | null>(null);
+  const [showClearAllModal, setShowClearAllModal] = useState(false);
 
   // Simulation custom text state
   const [customSimText, setCustomSimText] = useState("");
@@ -202,23 +219,34 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
 
     const storageKey = `fb_messenger_threads_${selectedPage.id}`;
     const saved = localStorage.getItem(storageKey);
+    const deletedIds = getDeletedThreadIds(selectedPage.id);
+    const isInboxCleared = localStorage.getItem(`fb_inbox_cleared_${selectedPage.id}`) === "true";
 
-    if (saved) {
+    if (saved !== null) {
       try {
-        const parsed = JSON.parse(saved);
-        setThreads(parsed);
+        const parsed: ChatThread[] = JSON.parse(saved);
+        const filtered = parsed.filter(t => !deletedIds.includes(t.id) && !deletedIds.includes(t.id.replace(/^t_/, "")));
+        setThreads(filtered);
         // Find previously selected thread or default to first
-        if (parsed.length > 0) {
-          setSelectedThread(parsed[0]);
+        if (filtered.length > 0) {
+          setSelectedThread(filtered[0]);
         } else {
           setSelectedThread(null);
         }
       } catch (e) {
         console.error("Error parsing saved threads:", e);
+        setThreads([]);
+        setSelectedThread(null);
       }
+    } else if (isInboxCleared) {
+      // User explicitly cleared inbox before
+      setThreads([]);
+      setSelectedThread(null);
     } else {
-      // Fallback to mock defaults or empty list
-      const defaults = MOCK_INITIAL_THREADS[selectedPage.id] || [];
+      // Fallback to mock defaults only if never saved/cleared
+      const defaults = (MOCK_INITIAL_THREADS[selectedPage.id] || []).filter(
+        t => !deletedIds.includes(t.id) && !deletedIds.includes(t.id.replace(/^t_/, ""))
+      );
       setThreads(defaults);
       localStorage.setItem(storageKey, JSON.stringify(defaults));
       if (defaults.length > 0) {
@@ -235,7 +263,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
     if (savedSettings) {
       try {
         const parsed = JSON.parse(savedSettings);
-        setAiAutoreplyEnabled(parsed.enabled ?? false);
+        setAiAutoreplyEnabled(parsed.enabled ?? true);
         setAiPersona(parsed.persona ?? "standard");
         setAiCustomInstructions(parsed.customInstructions ?? "");
       } catch (e) {
@@ -243,7 +271,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
       }
     } else {
       // Set reasonable defaults based on page name
-      setAiAutoreplyEnabled(false);
+      setAiAutoreplyEnabled(true);
       setAiPersona("standard");
       if (selectedPage.name.toLowerCase().includes("mũi né") || selectedPage.name.toLowerCase().includes("may tinh")) {
         setAiCustomInstructions("Cửa hàng: Máy Tính Mũi Né\nĐịa chỉ: 125 Huỳnh Thúc Kháng, Mũi Né, Phan Thiết\nDịch vụ: Sửa máy tính tận nơi, cài Win dạo giá sinh viên 100k, vệ sinh PC/Laptop 150k, nâng cấp ổ cứng SSD 120GB giá 350k mượt gấp 5 lần, ráp máy PC gaming giá rẻ từ 6 triệu đồng.\nChính sách: Bảo hành 1 đổi 1 tận nơi, hỗ trợ nhiệt tình, tư vấn miễn phí.");
@@ -297,12 +325,287 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
     }
   }, [selectedThread?.messages, selectedThread?.id, isAutoreplyThinking]);
 
+  // Helper to manage persistent deleted threads blacklist per page
+  const getDeletedThreadIds = (pageId: string): string[] => {
+    try {
+      const raw = localStorage.getItem(`fb_deleted_threads_${pageId}`);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const markThreadAsDeleted = (pageId: string, thread: ChatThread) => {
+    try {
+      const current = getDeletedThreadIds(pageId);
+      const idsToAdd = [thread.id, thread.id.replace(/^t_/, "")];
+      thread.messages.forEach(m => {
+        if (m.senderId && !m.isPage) idsToAdd.push(m.senderId);
+      });
+      const updated = Array.from(new Set([...current, ...idsToAdd]));
+      localStorage.setItem(`fb_deleted_threads_${pageId}`, JSON.stringify(updated));
+    } catch (e) {
+      console.error("Failed to persist deleted thread id:", e);
+    }
+  };
+
+  const markAllCurrentThreadsAsDeleted = (pageId: string, currentThreads: ChatThread[]) => {
+    try {
+      const current = getDeletedThreadIds(pageId);
+      const idsToAdd: string[] = [];
+      currentThreads.forEach(t => {
+        idsToAdd.push(t.id);
+        idsToAdd.push(t.id.replace(/^t_/, ""));
+        t.messages.forEach(m => {
+          if (m.senderId && !m.isPage) idsToAdd.push(m.senderId);
+        });
+      });
+      const updated = Array.from(new Set([...current, ...idsToAdd]));
+      localStorage.setItem(`fb_deleted_threads_${pageId}`, JSON.stringify(updated));
+      localStorage.setItem(`fb_inbox_cleared_${pageId}`, "true");
+    } catch (e) {
+      console.error("Failed to persist clear inbox:", e);
+    }
+  };
+
+  const clearDeletedBlacklist = (pageId: string) => {
+    localStorage.removeItem(`fb_deleted_threads_${pageId}`);
+    localStorage.removeItem(`fb_inbox_cleared_${pageId}`);
+  };
+
   // Helper to sync threads back to LocalStorage
   const saveThreadsToStorage = (updatedThreads: ChatThread[]) => {
     if (!selectedPage) return;
     const storageKey = `fb_messenger_threads_${selectedPage.id}`;
     localStorage.setItem(storageKey, JSON.stringify(updatedThreads));
   };
+
+  // Helper to build AI system instructions with smart Zalo routing logic
+  const buildAiPromptInstructions = () => {
+    let finalInstructions = aiCustomInstructions || "";
+
+    // Append custom knowledge base documents if any are selected
+    if (selectedPage) {
+      const knowledgeKey = `fb_page_ai_knowledge_${selectedPage.id}`;
+      const savedKnowledge = localStorage.getItem(knowledgeKey);
+      if (savedKnowledge) {
+        try {
+          const parsed = JSON.parse(savedKnowledge);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const knowledgeBlocks = parsed.map((item: any, idx: number) => {
+              const text = typeof item === 'string' ? item : (item.message || "");
+              return `Tài liệu kiến thức thực tế ${idx + 1}:\n"""\n${text}\n"""`;
+            }).join("\n\n");
+            
+            finalInstructions += `\n\nKIẾN THỨC VÀ THÔNG TIN SẢN PHẨM/DỊCH VỤ THỰC TẾ (Sử dụng thông tin dưới đây để trả lời câu hỏi của khách hàng một cách chính xác nhất):\n${knowledgeBlocks}`;
+          }
+        } catch (e) {
+          console.error("Error reading selected knowledge posts:", e);
+        }
+      }
+    }
+
+    if (zaloPhone) {
+      const cleanPhone = zaloPhone.replace(/\D/g, "");
+      finalInstructions += `\n\nTHÔNG TIN HOTLINE / ZALO CỬA HÀNG: Số Hotline/Zalo kỹ thuật là ${zaloPhone} (link: https://zalo.me/${cleanPhone}).\n` +
+        `QUY TẮC PHÂN LUỒNG ZALO QUAN TRỌNG:\n` +
+        `- TUYỆT ĐỐI KHÔNG đưa link Zalo hoặc số điện thoại vào các câu chào hỏi, hỏi giá thông thường, hỏi giờ giấc, hỏi cấu hình hay các thắc mắc thông thường mà bạn có thể trả lời trực tiếp.\n` +
+        `- CHỈ ĐƯỢC CHỦ ĐỘNG GỢI Ý ZALO KHI:\n` +
+        `  1. Khách hàng gặp câu hỏi kỹ thuật quá khó, lỗi phần cứng bí ẩn cần gửi video clip kiểm tra chuyên sâu, hoặc cần thợ kỹ thuật liên hệ trực tiếp để khảo sát tận nơi.\n` +
+        `  2. Khách hàng có việc khẩn cấp (ví dụ: "cần gấp", "máy hỏng nặng cứu gấp", "cần thợ qua ngay").\n` +
+        `  3. Khách hàng trực tiếp yêu cầu xin số điện thoại, xin Zalo hoặc muốn gọi điện thoại trao đổi.`;
+    }
+    return finalInstructions;
+  };
+
+  // Helper to trigger AI Auto-reply for a thread and dispatch to Facebook if Live mode
+  const triggerAiAutoreplyForThread = async (
+    targetThread: ChatThread,
+    customerMessageText: string,
+    historyMessages: ChatMessage[]
+  ) => {
+    if (!selectedPage || !aiAutoreplyEnabled) return;
+
+    // Check if we've already answered this specific message ID or timestamp
+    const respondedKey = `fb_ai_responded_${selectedPage.id}_${targetThread.id}`;
+    const lastRespondedMsg = localStorage.getItem(respondedKey);
+    if (lastRespondedMsg === customerMessageText) {
+      return; // Already replied to this message
+    }
+
+    setIsAutoreplyThinking(true);
+
+    try {
+      const finalInstructions = buildAiPromptInstructions();
+
+      // 1. Generate reply with Gemini 3.1 Flash Lite
+      const response = await fetch("/api/facebook/messages/ai-suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pageName: selectedPage.name,
+          customerName: targetThread.customerName,
+          lastMessage: customerMessageText,
+          chatHistory: historyMessages.slice(-6).map(m => ({
+            sender: m.isPage ? "Shop" : "Khách hàng",
+            text: m.message
+          })),
+          persona: aiPersona,
+          customInstructions: finalInstructions
+        })
+      });
+
+      const data = await response.json();
+      const aiResponseText = response.ok && data.suggestion
+        ? data.suggestion
+        : `Dạ chào anh/chị ${targetThread.customerName}! Cảm ơn anh/chị đã nhắn tin. Shop "${selectedPage.name}" đã nhận được tin: "${customerMessageText}". Em sẽ kiểm tra và tư vấn kỹ thuật ngay cho mình nhé ạ!`;
+
+      // 2. Append AI reply to the thread
+      const newAiMsg: ChatMessage = {
+        id: "msg_ai_auto_" + Math.random().toString(36).substring(2, 9),
+        senderId: selectedPage.id,
+        senderName: `${selectedPage.name} (Trợ lý AI)`,
+        message: aiResponseText,
+        timestamp: new Date().toISOString(),
+        isPage: true
+      };
+
+      const finalMessages = [...historyMessages, newAiMsg];
+      const finalThread: ChatThread = {
+        ...targetThread,
+        lastMessage: aiResponseText,
+        updatedAt: newAiMsg.timestamp,
+        isUnread: false,
+        messages: finalMessages
+      };
+
+      // Mark this message as answered
+      localStorage.setItem(respondedKey, customerMessageText);
+
+      // Update state & storage
+      setSelectedThread(prev => prev && prev.id === targetThread.id ? finalThread : prev);
+      setThreads(prev => {
+        const list = prev.map(t => t.id === targetThread.id ? finalThread : t);
+        saveThreadsToStorage(list);
+        return list;
+      });
+
+      // 3. If Live Page connected with real access token, dispatch message back to Facebook via Graph API!
+      if (!isDemoMode && selectedPage.accessToken && !selectedPage.accessToken.startsWith("demo_")) {
+        const resolvedCustomerId = targetThread.customerId || (targetThread.id.startsWith("t_") ? targetThread.id.substring(2) : targetThread.id);
+        try {
+          await fetch("/api/facebook/messages/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              pageId: selectedPage.id,
+              accessToken: selectedPage.accessToken,
+              conversationId: targetThread.id,
+              customerId: resolvedCustomerId,
+              recipientId: resolvedCustomerId,
+              message: aiResponseText
+            })
+          });
+        } catch (sendErr) {
+          console.error("Failed to push AI reply to live Facebook Graph API:", sendErr);
+        }
+      }
+
+    } catch (err) {
+      console.error("AI Autoreply Execution Error:", err);
+    } finally {
+      setIsAutoreplyThinking(false);
+    }
+  };
+
+  // Sync Live Facebook Conversations from Graph API
+  const syncFacebookConversations = async (silent = false) => {
+    if (!selectedPage || !selectedPage.accessToken || selectedPage.accessToken.startsWith("demo_")) {
+      if (!silent) {
+        setIsSyncing(true);
+        setTimeout(() => {
+          setIsSyncing(false);
+          setLastSyncedAt(new Date());
+        }, 600);
+      }
+      return;
+    }
+
+    try {
+      if (!silent) setIsSyncing(true);
+      setLiveSyncError(null);
+
+      const res = await fetch(`/api/facebook/conversations?pageId=${selectedPage.id}&accessToken=${encodeURIComponent(selectedPage.accessToken)}`);
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        if (!silent && data.error) {
+          setLiveSyncError(data.error);
+        }
+        return;
+      }
+
+      if (data.threads && Array.isArray(data.threads)) {
+        const deletedIds = getDeletedThreadIds(selectedPage.id);
+        const activeThreads = data.threads.filter((t: ChatThread) => {
+          const cleanId = t.id.replace(/^t_/, "");
+          return !deletedIds.includes(t.id) && !deletedIds.includes(cleanId);
+        });
+
+        setThreads(activeThreads);
+        saveThreadsToStorage(activeThreads);
+        setSelectedThread(prev => {
+          if (!prev) return activeThreads.length > 0 ? activeThreads[0] : null;
+          const match = activeThreads.find((t: ChatThread) => t.id === prev.id);
+          return match || (activeThreads.length > 0 ? activeThreads[0] : null);
+        });
+        setLastSyncedAt(new Date());
+
+        // Check if there is any unread thread whose last message is from customer and needs AI auto-reply
+        if (aiAutoreplyEnabled) {
+          for (const thread of activeThreads) {
+            const msgs = thread.messages || [];
+            if (msgs.length > 0) {
+              const lastMsg = msgs[msgs.length - 1];
+              // If last message is from customer (not page)
+              if (!lastMsg.isPage && lastMsg.senderId !== selectedPage.id) {
+                const respondedKey = `fb_ai_responded_${selectedPage.id}_${thread.id}`;
+                const lastResponded = localStorage.getItem(respondedKey);
+                if (lastResponded !== lastMsg.message) {
+                  // Trigger AI Auto-reply
+                  triggerAiAutoreplyForThread(thread, lastMsg.message, msgs);
+                  break; // Process one at a time
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (err: any) {
+      if (!silent) {
+        console.error("Live conversations fetch failed:", err);
+        setLiveSyncError(err.message || "Không thể tải tin nhắn từ Facebook.");
+      }
+    } finally {
+      if (!silent) setIsSyncing(false);
+    }
+  };
+
+  // Poll incoming webhook events and live conversations every 10 seconds
+  useEffect(() => {
+    if (!selectedPage || !selectedPage.accessToken || selectedPage.accessToken.startsWith("demo_")) {
+      return;
+    }
+
+    // Initial fetch
+    syncFacebookConversations(true);
+
+    const interval = setInterval(() => {
+      syncFacebookConversations(true);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [selectedPage?.id, selectedPage?.accessToken]);
 
   const handleSelectThread = (thread: ChatThread) => {
     // Mark as read
@@ -401,27 +704,43 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
           return list;
         });
 
-      }, 2000);
+        // If AI auto-reply is on, trigger it for this customer reply too!
+        if (aiAutoreplyEnabled) {
+          setTimeout(() => {
+            triggerAiAutoreplyForThread(finalThread, responseText, finalMessages);
+          }, 1000);
+        }
+
+      }, 1500);
     } else {
       // LIVE API SEND MESSAGE to Graph API (Standard Facebook Messenger endpoint)
       try {
+        const lastCustomerMsg = [...selectedThread.messages].reverse().find(m => !m.isPage && m.senderId && m.senderId !== selectedPage.id);
+        const resolvedCustomerId = selectedThread.customerId || lastCustomerMsg?.senderId || (selectedThread.id.startsWith("t_") ? selectedThread.id.substring(2) : selectedThread.id);
+
         const response = await fetch("/api/facebook/messages/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             pageId: selectedPage.id,
             accessToken: selectedPage.accessToken,
-            recipientId: selectedThread.id, // Using Thread ID or PSID as recipient
+            conversationId: selectedThread.id,
+            customerId: resolvedCustomerId,
+            recipientId: resolvedCustomerId,
             message: messageContent
           })
         });
 
-        if (!response.ok) {
-          const errData = await response.json();
-          console.error("Facebook Live Message send error:", errData);
+        const resData = await response.json();
+        if (!response.ok || !resData.success) {
+          console.error("Facebook Live Message send error:", resData);
+          setLiveSyncError(resData.error || "Không thể gửi tin nhắn qua Facebook. Kiểm tra lại quyền hoặc ID khách hàng.");
+        } else {
+          setLiveSyncError(null);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to make live message network request:", err);
+        setLiveSyncError(err.message || "Lỗi mạng khi gửi tin nhắn tới Facebook.");
       }
     }
   };
@@ -463,10 +782,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
       setIsAutoreplyThinking(true);
       
       try {
-        let finalInstructions = aiCustomInstructions || "";
-        if (zaloPhone) {
-          finalInstructions += `\nLƯU Ý QUAN TRỌNG VỀ HỖ TRỢ KHÁCH HÀNG GẤP: Nếu khách hàng tỏ ra cần gấp, muốn liên hệ trực tiếp, gọi điện thoại, cần hỗ trợ gấp hoặc hỏi số hotline/zalo, bạn hãy chủ động hướng dẫn họ liên hệ qua Zalo Hotline tại link: https://zalo.me/${zaloPhone.replace(/\D/g, "")} để nhận cuộc gọi hỗ trợ từ kỹ thuật viên ngay nhé.`;
-        }
+        const finalInstructions = buildAiPromptInstructions();
 
         // Fetch AI suggest
         const response = await fetch("/api/facebook/messages/ai-suggest", {
@@ -542,10 +858,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
       setIsAiLoading(true);
       setAiSuggestion(null);
 
-      let finalInstructions = aiCustomInstructions || "";
-      if (zaloPhone) {
-        finalInstructions += `\nLƯU Ý QUAN TRỌNG VỀ HỖ TRỢ KHÁCH HÀNG GẤP: Nếu khách hàng tỏ ra cần gấp, muốn liên hệ trực tiếp, gọi điện thoại, cần hỗ trợ gấp hoặc hỏi số hotline/zalo, bạn hãy chủ động hướng dẫn họ liên hệ qua Zalo Hotline tại link: https://zalo.me/${zaloPhone.replace(/\D/g, "")} để nhận cuộc gọi hỗ trợ từ kỹ thuật viên ngay nhé.`;
-      }
+      const finalInstructions = buildAiPromptInstructions();
 
       const response = await fetch("/api/facebook/messages/ai-suggest", {
         method: "POST",
@@ -637,6 +950,37 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
     }
   };
 
+  // Delete single thread
+  const handleConfirmDeleteThread = () => {
+    if (!threadToDelete || !selectedPage) return;
+    markThreadAsDeleted(selectedPage.id, threadToDelete);
+    const updated = threads.filter(t => t.id !== threadToDelete.id);
+    setThreads(updated);
+    saveThreadsToStorage(updated);
+
+    if (selectedThread?.id === threadToDelete.id) {
+      setSelectedThread(updated.length > 0 ? updated[0] : null);
+    }
+    setThreadToDelete(null);
+  };
+
+  // Clear all threads in inbox
+  const handleConfirmClearAllThreads = () => {
+    if (!selectedPage) return;
+    markAllCurrentThreadsAsDeleted(selectedPage.id, threads);
+    setThreads([]);
+    saveThreadsToStorage([]);
+    setSelectedThread(null);
+    setShowClearAllModal(false);
+  };
+
+  // Restore deleted threads if user wants to re-fetch from Facebook
+  const handleRestoreDeletedThreads = async () => {
+    if (!selectedPage) return;
+    clearDeletedBlacklist(selectedPage.id);
+    await syncFacebookConversations(false);
+  };
+
   // Filter threads by search query
   const filteredThreads = threads.filter(t => 
     t.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -687,41 +1031,129 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs flex flex-col h-[calc(100vh-130px)]">
       
       {/* Top Header Controls */}
-      <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50/70 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
             <MessageCircleCode className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-bold text-slate-800 text-base flex items-center gap-2">
-              Messenger Inbox
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
-                Active
-              </span>
-            </h1>
-            <p className="text-xs text-slate-500">Đồng bộ tin nhắn & chăm sóc khách hàng tự động</p>
+            <div className="flex items-center gap-2">
+              <h1 className="font-bold text-slate-800 text-base">
+                Messenger Inbox
+              </h1>
+              {selectedPage?.accessToken && !selectedPage.accessToken.startsWith("demo_") ? (
+                <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                  Live Facebook
+                </span>
+              ) : (
+                <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Demo Mode
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500">
+              {lastSyncedAt 
+                ? `Đồng bộ lần cuối lúc: ${lastSyncedAt.toLocaleTimeString("vi-VN")}` 
+                : "Đồng bộ tin nhắn & chăm sóc khách hàng tự động"}
+            </p>
           </div>
         </div>
 
-        {/* Facebook Page Dropdown Switcher */}
-        <div className="flex items-center gap-2 self-stretch sm:self-auto">
-          <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Đang xem:</span>
-          <select 
-            value={selectedPage?.id || ""}
-            onChange={(e) => {
-              const selected = pages.find(p => p.id === e.target.value);
-              if (selected) setSelectedPage(selected);
-            }}
-            className="flex-1 sm:w-52 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 outline-hidden focus:border-blue-500 shadow-2xs"
+        {/* Action Controls & Facebook Page Dropdown Switcher */}
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+          {/* Sync Button */}
+          <button
+            onClick={() => syncFacebookConversations(false)}
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold shadow-2xs hover:shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            title="Đồng bộ tin nhắn mới nhất từ Facebook Page"
           >
-            {pages.map(page => (
-              <option key={page.id} value={page.id}>
-                🚩 {page.name}
-              </option>
-            ))}
-          </select>
+            <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${isSyncing ? "animate-spin" : ""}`} />
+            <span>{isSyncing ? "Đang đồng bộ..." : "Đồng bộ tin nhắn"}</span>
+          </button>
+
+          {/* Webhook / Live Info Toggle */}
+          <button
+            onClick={() => setShowWebhookGuide(!showWebhookGuide)}
+            className={`p-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+              showWebhookGuide 
+                ? "bg-blue-50 text-blue-700 border-blue-200" 
+                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+            }`}
+            title="Hướng dẫn nhận tin nhắn trực tiếp"
+          >
+            <HelpCircle className="w-4 h-4 text-slate-500" />
+          </button>
+
+          <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-2xs">
+            <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Page:</span>
+            <select 
+              value={selectedPage?.id || ""}
+              onChange={(e) => {
+                const selected = pages.find(p => p.id === e.target.value);
+                if (selected) setSelectedPage(selected);
+              }}
+              className="text-xs font-semibold text-slate-700 bg-transparent outline-hidden cursor-pointer max-w-[160px] sm:max-w-[200px] truncate"
+            >
+              {pages.map(page => (
+                <option key={page.id} value={page.id}>
+                  🚩 {page.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
+
+      {/* Webhook & Permissions Guide Banner (Collapsible) */}
+      {(showWebhookGuide || liveSyncError) && (
+        <div className="p-4 bg-blue-50/70 border-b border-blue-100 text-xs space-y-2">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2 font-bold text-blue-900">
+              <Info className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <span>Hướng dẫn nhận & đồng bộ tin nhắn Facebook Messenger</span>
+            </div>
+            <button 
+              onClick={() => { setShowWebhookGuide(false); setLiveSyncError(null); }}
+              className="text-slate-400 hover:text-slate-600 font-bold px-1 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+
+          {liveSyncError && (
+            <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Thông báo từ Facebook API:</p>
+                <p className="text-[11px] text-amber-700 mt-0.5">{liveSyncError}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-slate-600 pt-1">
+            <div className="p-2.5 bg-white rounded-lg border border-blue-100">
+              <p className="font-bold text-slate-800 mb-1">1. Gửi tin nhắn thử</p>
+              <p className="text-[11px] leading-relaxed">
+                Mở Facebook hoặc ứng dụng Messenger cá nhân, tìm Trang <strong className="text-blue-600">{selectedPage?.name}</strong> và gửi tin nhắn text bất kỳ.
+              </p>
+            </div>
+            <div className="p-2.5 bg-white rounded-lg border border-blue-100">
+              <p className="font-bold text-slate-800 mb-1">2. Đồng bộ tự động</p>
+              <p className="text-[11px] leading-relaxed">
+                Hệ thống tự động kiểm tra tin nhắn mới mỗi 10 giây hoặc bạn có thể bấm ngay nút <strong>"Đồng bộ tin nhắn"</strong> ở góc trên bên phải.
+              </p>
+            </div>
+            <div className="p-2.5 bg-white rounded-lg border border-blue-100">
+              <p className="font-bold text-slate-800 mb-1">3. Cấp quyền Messenger</p>
+              <p className="text-[11px] leading-relaxed">
+                Đảm bảo khi Đăng nhập Facebook, bạn cho phép quyền <code>pages_messaging</code> để hệ thống có quyền đọc và trả lời tin nhắn của Trang.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Inbox Workspace */}
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -730,8 +1162,8 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
         <div className="w-80 border-r border-slate-100 flex flex-col bg-slate-50/20">
           
           {/* Threads search bar */}
-          <div className="p-3 border-b border-slate-100/80">
-            <div className="relative">
+          <div className="p-3 border-b border-slate-100/80 flex items-center gap-2">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
               <input 
                 type="text" 
@@ -741,6 +1173,16 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
                 className="w-full text-xs bg-slate-100/70 hover:bg-slate-100 focus:bg-white text-slate-700 rounded-xl pl-9 pr-4 py-2 outline-hidden border border-transparent focus:border-slate-200 transition-all placeholder:text-slate-400"
               />
             </div>
+            {threads.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowClearAllModal(true)}
+                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl border border-slate-200/80 transition-all shrink-0 cursor-pointer"
+                title="Xóa tất cả hội thoại trong hộp thư"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           {/* Threads list scrollable */}
@@ -749,10 +1191,10 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
               filteredThreads.map(thread => {
                 const isSelected = selectedThread?.id === thread.id;
                 return (
-                  <button 
+                  <div 
                     key={thread.id}
                     onClick={() => handleSelectThread(thread)}
-                    className={`w-full p-3 text-left transition-all hover:bg-slate-50 flex items-start gap-3 cursor-pointer relative ${
+                    className={`group w-full p-3 text-left transition-all hover:bg-slate-50 flex items-start gap-3 cursor-pointer relative ${
                       isSelected ? "bg-blue-50/50 border-l-3 border-blue-600" : ""
                     }`}
                   >
@@ -774,12 +1216,12 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
                     </div>
 
                     {/* Meta info */}
-                    <div className="flex-1 min-w-0 pr-4">
+                    <div className="flex-1 min-w-0 pr-1">
                       <div className="flex items-center justify-between">
                         <p className={`text-xs font-bold truncate ${thread.isUnread ? "text-slate-900" : "text-slate-700"}`}>
                           {thread.customerName}
                         </p>
-                        <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                        <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap ml-1">
                           {formatRelativeTime(thread.updatedAt)}
                         </span>
                       </div>
@@ -788,16 +1230,39 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
                       </p>
                     </div>
 
-                    {/* Unread indicator badge */}
-                    {thread.isUnread && (
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-600 shadow-xs"></span>
-                    )}
-                  </button>
+                    {/* Actions & unread indicator */}
+                    <div className="flex items-center gap-1 shrink-0 self-center">
+                      {thread.isUnread && (
+                        <span className="w-2 h-2 rounded-full bg-blue-600 shadow-xs group-hover:hidden"></span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setThreadToDelete(thread);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer"
+                        title={`Xóa cuộc trò chuyện với ${thread.customerName}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 );
               })
             ) : (
-              <div className="p-8 text-center text-slate-400 text-xs">
-                Không có cuộc hội thoại nào phù hợp.
+              <div className="p-8 text-center text-slate-400 text-xs space-y-3">
+                <MessageSquare className="w-8 h-8 mx-auto text-slate-300" />
+                <p>Hộp thư trống hoặc không có tin nhắn phù hợp.</p>
+                {selectedPage && getDeletedThreadIds(selectedPage.id).length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleRestoreDeletedThreads}
+                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+                  >
+                    Tải lại tất cả từ Facebook
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -825,11 +1290,22 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="text-right hidden sm:block">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <div className="text-right hidden md:block">
                     <span className="text-[10px] font-semibold text-slate-400 block">Kênh kết nối</span>
                     <span className="text-[11px] font-bold text-blue-700">{selectedPage?.name}</span>
                   </div>
+
+                  <button
+                    id="btn-delete-active-thread"
+                    type="button"
+                    onClick={() => setThreadToDelete(selectedThread)}
+                    className="px-2.5 py-1.5 bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                    title="Xóa cuộc trò chuyện này"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Xóa hội thoại</span>
+                  </button>
 
                   <button
                     id="btn-send-zalo-escalation"
@@ -998,10 +1474,32 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
               )}
 
               {/* Message Input & Action Triggers */}
-              <div className="p-4 border-t border-slate-100 bg-white">
+              <div className="p-4 border-t border-slate-100 bg-white space-y-2.5">
                 
+                {/* Live Message Error Banner */}
+                {liveSyncError && (
+                  <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start justify-between gap-2 animate-fade-in">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold">Không thể chuyển tin nhắn đến Messenger Facebook:</p>
+                        <p className="text-[11px] text-rose-700 mt-0.5 leading-relaxed">{liveSyncError}</p>
+                        <p className="text-[10px] text-rose-600 mt-1">
+                          💡 <em>Gợi ý:</em> Hãy đảm bảo khách hàng đã nhắn tin vào Page trong 24h gần nhất và tài khoản Facebook đã được cấp quyền <code>pages_messaging</code> khi đăng nhập.
+                        </p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setLiveSyncError(null)}
+                      className="text-rose-400 hover:text-rose-700 font-bold px-1 text-sm cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
                 {/* AI Assistant Trigger Button Row */}
-                <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center justify-between mb-1">
                   <button 
                     id="btn-trigger-copilot"
                     type="button"
@@ -1093,11 +1591,16 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
           <div id="ai-settings-sidebar" className="w-80 border-l border-slate-200 bg-slate-50/50 flex flex-col overflow-y-auto p-4 space-y-5 animate-in slide-in-from-right duration-150">
             {/* Header */}
             <div>
-              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                <Bot className="w-4 h-4 text-indigo-600" />
-                <span>Cài Đặt Trợ Lý AI</span>
-              </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Tự động hóa kết nối và phản hồi khách hàng</p>
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                  <Bot className="w-4 h-4 text-indigo-600" />
+                  <span>Cài Đặt Trợ Lý AI</span>
+                </h3>
+                <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">
+                  Gemini 3.1 Flash Lite
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">Tự động hóa kết nối và phản hồi khách hàng thông minh</p>
             </div>
 
             {/* Auto reply switch card */}
@@ -1181,10 +1684,19 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
             </div>
 
             {/* Zalo Escalation Hotline Config Card */}
-            <div className="bg-white p-3.5 rounded-xl border border-blue-150 shadow-3xs space-y-3.5">
-              <div className="flex items-center gap-2 text-blue-850">
-                <PhoneCall className="w-4 h-4 text-blue-600 animate-pulse shrink-0" />
-                <span className="text-xs font-black">Zalo Hotline Hỗ Trợ Gấp</span>
+            <div className="bg-white p-3.5 rounded-xl border border-blue-150 shadow-3xs space-y-3">
+              <div className="flex items-center justify-between text-blue-850">
+                <div className="flex items-center gap-1.5">
+                  <PhoneCall className="w-4 h-4 text-blue-600 animate-pulse shrink-0" />
+                  <span className="text-xs font-black">Zalo Hotline Kỹ Thuật</span>
+                </div>
+                <span className="text-[9px] bg-amber-50 text-amber-700 font-bold px-1.5 py-0.5 rounded border border-amber-200">
+                  Chỉ gửi khi cần gấp / ca khó
+                </span>
+              </div>
+
+              <div className="p-2 bg-blue-50/60 rounded-lg border border-blue-100 text-[10px] text-blue-900 leading-relaxed">
+                🛡️ <strong>Nguyên tắc:</strong> AI sẽ tự giải đáp các câu hỏi thông thường trên Messenger. AI <strong>chỉ</strong> đưa link Zalo khi khách cần gấp, xin số điện thoại, hoặc ca sửa chữa phức tạp.
               </div>
               
               <div className="space-y-1.5">
@@ -1209,7 +1721,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
                   id="txt-zalo-template"
                   value={zaloMessageTemplate}
                   onChange={(e) => setZaloMessageTemplate(e.target.value)}
-                  rows={3}
+                  rows={2}
                   placeholder="Tin nhắn gửi đi giới thiệu hotline..."
                   className="w-full text-[11px] p-2 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-lg outline-none resize-none font-medium text-slate-700 leading-tight"
                 />
@@ -1225,7 +1737,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
                 className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-black shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <PhoneCall className="w-3.5 h-3.5" />
-                <span>Gửi Hotline Zalo Gấp</span>
+                <span>Gửi Thẻ Hotline Zalo Ngay</span>
               </button>
             </div>
 
@@ -1242,9 +1754,11 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
               {/* Predefined questions list */}
               <div className="space-y-1.5">
                 {[
+                  "Chào shop",
                   "Cửa hàng mình mở cửa đến mấy giờ ạ?",
                   "Sửa máy tính ở Mũi Né bao nhiêu tiền hả shop?",
-                  "Shop ơi có card màn hình cũ GTX 1660s không?"
+                  "Shop ơi có card màn hình cũ GTX 1660s không?",
+                  "Có ráp PC Gaming tầm 10 triệu không shop?"
                 ].map((q, idx) => (
                   <button
                     key={idx}
@@ -1252,10 +1766,11 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
                     type="button"
                     onClick={() => simulateCustomerIncomingMessage(q)}
                     disabled={isAutoreplyThinking}
-                    className="w-full text-left p-2 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-900 text-[11px] text-slate-600 font-medium border border-slate-200/50 hover:border-indigo-200 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed truncate"
+                    className="w-full text-left p-2 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-900 text-[11px] text-slate-600 font-medium border border-slate-200/50 hover:border-indigo-200 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed truncate flex items-center gap-1.5"
                     title={q}
                   >
-                    💬 {q}
+                    <span>💬</span>
+                    <span className="font-semibold">{q}</span>
                   </button>
                 ))}
               </div>
@@ -1292,6 +1807,100 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
         )}
 
       </div>
+
+      {/* Delete Single Thread Confirmation Modal */}
+      {threadToDelete && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-150 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-red-600">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <button 
+                type="button"
+                onClick={() => setThreadToDelete(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="font-bold text-slate-800 text-sm">
+                Xóa cuộc trò chuyện này?
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Bạn có chắc muốn xóa cuộc trò chuyện với <strong className="text-slate-800 font-semibold">{threadToDelete.customerName}</strong> khỏi hộp thư của Trang <strong className="text-blue-600 font-semibold">{selectedPage?.name}</strong> không?
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setThreadToDelete(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteThread}
+                className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-xs hover:shadow transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Xác nhận xóa</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear All Threads Confirmation Modal */}
+      {showClearAllModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-150 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-red-600">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowClearAllModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="font-bold text-slate-800 text-sm">
+                Xóa tất cả hội thoại trong hộp thư?
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Thao tác này sẽ dọn sạch toàn bộ <strong className="text-slate-800 font-semibold">{threads.length} cuộc hội thoại</strong> hiện có trong hộp thư của Trang <strong className="text-blue-600 font-semibold">{selectedPage?.name}</strong>.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowClearAllModal(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmClearAllThreads}
+                className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-xs hover:shadow transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Xóa tất cả</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

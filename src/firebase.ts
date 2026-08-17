@@ -67,13 +67,73 @@ export const setStoredPages = (pages: FacebookPage[]) => {
   }
 };
 
+const DEFAULT_SAMPLE_POSTS: FacebookPost[] = [
+  {
+    id: "sample_post_1",
+    pageId: "109848525048293",
+    pageName: "MÁY TÍNH MŨI NÉ",
+    pagePicture: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=120&auto=format&fit=crop&q=80",
+    message: "🔥 Dịch vụ sửa chữa, vệ sinh tra keo tản nhiệt và nâng cấp Laptop - Máy tính bàn uy tín tại Mũi Né, Phan Thiết!\n\n👉 Kiểm tra lỗi phần cứng tận nơi, tư vấn tận tâm.\n👉 Linh kiện chính hãng, bảo hành chu đáo.\n👉 Giảm ngay 15% phí dịch vụ cho học sinh - sinh viên trong tuần này!",
+    mediaUrl: "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=600&auto=format&fit=crop&q=80",
+    scheduledAt: null,
+    publishedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    status: 'published',
+    error: null,
+    fbPostId: "109848525048293_987654321",
+    viewsCount: 3420,
+    reachCount: 2150,
+    likesCount: 185,
+    commentsCount: 42,
+    sharesCount: 28,
+    clicksCount: 96
+  },
+  {
+    id: "sample_post_2",
+    pageId: "109848525048293",
+    pageName: "MÁY TÍNH MŨI NÉ",
+    pagePicture: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=120&auto=format&fit=crop&q=80",
+    message: "💻 Vừa về lô Màn hình Gaming IPS 24 inch 165Hz viền siêu mỏng, chuẩn màu đồ họa & chiến game mượt mà không lo mỏi mắt.\n\n✅ Tấm nền IPS sắc nét góc nhìn 178 độ\n✅ Tần số quét 165Hz / 1ms MPRT\n✅ Bảo hành 24 tháng chính hãng đổi mới\n\nInbox shop để nhận giá ưu đãi và quà tặng kèm nhé!",
+    mediaUrl: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=600&auto=format&fit=crop&q=80",
+    scheduledAt: null,
+    publishedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    status: 'published',
+    error: null,
+    fbPostId: "109848525048293_123456789",
+    viewsCount: 2890,
+    reachCount: 1820,
+    likesCount: 142,
+    commentsCount: 35,
+    sharesCount: 19,
+    clicksCount: 74
+  },
+  {
+    id: "sample_post_3",
+    pageId: "109848525048293",
+    pageName: "MÁY TÍNH MŨI NÉ",
+    pagePicture: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=120&auto=format&fit=crop&q=80",
+    message: "⚡ Cài đặt Windows bản quyền, xử lý phần mềm, diệt virus và cứu dữ liệu ổ cứng tận nơi cho văn phòng, khách sạn & resort tại Mũi Né.",
+    mediaUrl: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=600&auto=format&fit=crop&q=80",
+    scheduledAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+    publishedAt: null,
+    status: 'scheduled',
+    error: null,
+    fbPostId: null
+  }
+];
+
 export const getStoredPosts = (): FacebookPost[] => {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.POSTS);
-    return data ? JSON.parse(data) : [];
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+    return DEFAULT_SAMPLE_POSTS;
   } catch (e) {
     console.error("Failed to read posts from localStorage:", e);
-    return [];
+    return DEFAULT_SAMPLE_POSTS;
   }
 };
 

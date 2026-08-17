@@ -1,1 +1,51 @@
 @import "tailwindcss";
+
+@keyframes vhs-scroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+
+@keyframes border-flash {
+  0%, 100% { border-color: #ef4444; }
+  50% { border-color: #eab308; }
+}
+
+@keyframes text-flicker {
+  0%, 19.999%, 22%, 62.999%, 64%, 64.999%, 70%, 100% {
+    opacity: 0.99;
+    filter: drop-shadow(0 0 1px rgba(255,255,255,0.8));
+  }
+  20%, 21.999%, 63%, 63.999%, 65%, 69.999% {
+    opacity: 0.4;
+    filter: none;
+  }
+}
+
+.scanlines-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.15) 50%
+  );
+  background-size: 100% 4px;
+  animation: vhs-scroll 12s linear infinite;
+}
+
+.matrix-overlay {
+  background: linear-gradient(rgba(16, 185, 129, 0) 90%, rgba(16, 185, 129, 0.15) 100%);
+  background-size: 100% 20px;
+  animation: vhs-scroll 4s linear infinite;
+}
+
+.animate-border-flash {
+  animation: border-flash 1.2s step-end infinite;
+}
+
+.animate-flicker {
+  animation: text-flicker 2.5s linear infinite;
+}
+
+.cinematic-letterbox {
+  background: linear-gradient(to bottom, #000 10%, transparent 10%, transparent 90%, #000 90%);
+}
+
