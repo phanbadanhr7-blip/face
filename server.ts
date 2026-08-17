@@ -222,11 +222,21 @@ app.post("/api/facebook/messages/ai-suggest", async (req: Request, res: Response
 
     const systemInstruction = `Bạn là Trợ lý AI Chăm sóc khách hàng xuất sắc cho Facebook Page tên là "${pageName || "Cửa hàng"}".
 Hãy viết một tin nhắn phản hồi bằng tiếng Việt cực kỳ ${personaStr} để gửi cho khách hàng tên là "${customerName || "Anh/Chị"}".
-Dựa vào tin nhắn cuối cùng của khách hàng: "${lastMessage}".
-Và lịch sử cuộc trò chuyện gần đây (nếu có):
-${historyStr}
 
-${customInstructions ? `HƯỚNG DẪN CẤU HÌNH RIÊNG CHO AI:\n${customInstructions}\n` : ""}
+LỊCH SỬ CUỘC TRÒ CHUYỆN GẦN ĐÂY GIỮA SHOP VÀ KHÁCH HÀNG (Độ dài tối đa cấu hình bởi người dùng. Sắp xếp theo thứ tự thời gian từ cũ đến mới):
+${historyStr ? historyStr : "(Chưa có lịch sử trước đó)"}
+
+TIN NHẮN MỚI NHẤT CẦN TRẢ LỜI NGAY:
+"${lastMessage}"
+
+YÊU CẦU ĐẶC BIỆT VỀ NGỮ CẢNH VÀ TRÍ NHỚ (CONVERSATIONAL MEMORY):
+- Đọc kỹ toàn bộ lịch sử trò chuyện ở trên để biết hai bên đã trao đổi những gì trước đó.
+- KHÔNG BAO GIỜ lặp lại câu chào hỏi hoặc giới thiệu bản thân nếu trước đó bạn hoặc Shop đã chào hỏi rồi.
+- KHÔNG lặp lại các thông tin đã trả lời ở các tin nhắn trước trong lịch sử. Tránh trả lời vòng vo hoặc lặp lại cùng một câu trả lời mẫu.
+- Hãy tạo sự liên kết tự nhiên với những gì khách hàng vừa nói hoặc hỏi trước đó để giữ cuộc trò chuyện liền mạch như một con người thực sự.
+- Trả lời trực tiếp và giải quyết dứt điểm thắc mắc trong tin nhắn mới nhất dựa trên thông tin đã thỏa thuận trước đó.
+
+${customInstructions ? `HƯỚNG DẪN CẤU HÌNH RIÊNG CHO AI (Kiến thức cửa hàng / Quy tắc riêng):\n${customInstructions}\n` : ""}
 
 QUY TẮC PHẢN HỒI BẮT BUỘC:
 1. GIẢI QUYẾT TRỰC TIẾP TRÊN MESSENGER:

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
+import { Menu } from "lucide-react";
 import ConnectionsTab from "./components/ConnectionsTab";
 import MessengerTab from "./components/MessengerTab";
 import CreatePostTab from "./components/CreatePostTab";
 import PostsAndAnalyticsTab from "./components/PostsAndAnalyticsTab";
-import HelpGuideTab from "./components/HelpGuideTab";
+import SettingsTab from "./components/SettingsTab";
 import { FacebookPage, FacebookPost } from "./types";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { 
@@ -22,6 +23,7 @@ import {
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("connections");
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
   const [pages, setPages] = useState<FacebookPage[]>(() => getStoredPages());
   const [posts, setPosts] = useState<FacebookPost[]>(() => getStoredPosts());
@@ -419,8 +421,8 @@ export default function App() {
             onDeletePost={handleDeletePost}
           />
         );
-      case "api-guide":
-        return <HelpGuideTab />;
+      case "settings":
+        return <SettingsTab />;
       default:
         return (
           <ConnectionsTab
@@ -440,11 +442,34 @@ export default function App() {
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
+        isOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Panel */}
-      <main className="flex-1 pl-64 min-h-screen bg-slate-50/50">
-        <div className="max-w-7xl mx-auto px-6 py-8 md:px-8">
+      <main className="flex-1 md:pl-64 min-h-screen bg-slate-50/50 flex flex-col">
+        {/* Mobile Header Bar */}
+        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-20">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="p-1.5 -ml-1.5 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <span className="font-bold text-sm text-slate-800 tracking-tight">
+              {activeTab === "connections" ? "Kết nối Trang" :
+               activeTab === "messenger" ? "Hộp thư Messenger" :
+               activeTab === "create-post" ? "Tạo bài viết AI" :
+               activeTab === "posts-analytics" ? "Quản lý bài viết" : "Cấu hình"}
+            </span>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+            MT
+          </div>
+        </header>
+
+        <div className="max-w-7xl mx-auto px-4 py-5 md:px-8 md:py-8 w-full flex-1">
           {renderContent()}
         </div>
       </main>

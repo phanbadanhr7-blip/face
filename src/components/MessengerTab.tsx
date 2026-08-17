@@ -22,7 +22,8 @@ import {
   HelpCircle,
   Info,
   Trash2,
-  X
+  X,
+  ArrowLeft
 } from "lucide-react";
 import { FacebookPage, ChatThread, ChatMessage } from "../types";
 
@@ -170,6 +171,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
   const [aiAutoreplyEnabled, setAiAutoreplyEnabled] = useState(true);
   const [aiPersona, setAiPersona] = useState<"sales" | "support" | "playful" | "standard">("standard");
   const [aiCustomInstructions, setAiCustomInstructions] = useState("");
+  const [aiHistoryLength, setAiHistoryLength] = useState<number>(5);
   const [isAutoreplyThinking, setIsAutoreplyThinking] = useState(false);
   const [isAiConfigOpen, setIsAiConfigOpen] = useState(true);
 
@@ -266,6 +268,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
         setAiAutoreplyEnabled(parsed.enabled ?? true);
         setAiPersona(parsed.persona ?? "standard");
         setAiCustomInstructions(parsed.customInstructions ?? "");
+        setAiHistoryLength(parsed.historyLength ?? 5);
       } catch (e) {
         console.error("Error loading AI settings:", e);
       }
@@ -273,6 +276,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
       // Set reasonable defaults based on page name
       setAiAutoreplyEnabled(true);
       setAiPersona("standard");
+      setAiHistoryLength(5);
       if (selectedPage.name.toLowerCase().includes("mũi né") || selectedPage.name.toLowerCase().includes("may tinh")) {
         setAiCustomInstructions("Cửa hàng: Máy Tính Mũi Né\nĐịa chỉ: 125 Huỳnh Thúc Kháng, Mũi Né, Phan Thiết\nDịch vụ: Sửa máy tính tận nơi, cài Win dạo giá sinh viên 100k, vệ sinh PC/Laptop 150k, nâng cấp ổ cứng SSD 120GB giá 350k mượt gấp 5 lần, ráp máy PC gaming giá rẻ từ 6 triệu đồng.\nChính sách: Bảo hành 1 đổi 1 tận nơi, hỗ trợ nhiệt tình, tư vấn miễn phí.");
       } else {
@@ -289,7 +293,8 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
       localStorage.setItem(settingsKey, JSON.stringify({
         enabled,
         persona: aiPersona,
-        customInstructions: aiCustomInstructions
+        customInstructions: aiCustomInstructions,
+        historyLength: aiHistoryLength
       }));
     }
   };
@@ -301,7 +306,8 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
       localStorage.setItem(settingsKey, JSON.stringify({
         enabled: aiAutoreplyEnabled,
         persona,
-        customInstructions: aiCustomInstructions
+        customInstructions: aiCustomInstructions,
+        historyLength: aiHistoryLength
       }));
     }
   };
@@ -313,7 +319,21 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
       localStorage.setItem(settingsKey, JSON.stringify({
         enabled: aiAutoreplyEnabled,
         persona: aiPersona,
-        customInstructions: custom
+        customInstructions: custom,
+        historyLength: aiHistoryLength
+      }));
+    }
+  };
+
+  const handleChangeHistoryLength = (length: number) => {
+    setAiHistoryLength(length);
+    if (selectedPage) {
+      const settingsKey = `fb_page_ai_settings_${selectedPage.id}`;
+      localStorage.setItem(settingsKey, JSON.stringify({
+        enabled: aiAutoreplyEnabled,
+        persona: aiPersona,
+        customInstructions: aiCustomInstructions,
+        historyLength: length
       }));
     }
   };
@@ -479,7 +499,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
           pageName: selectedPage.name,
           customerName: targetThread.customerName,
           lastMessage: customerMessageText,
-          chatHistory: historyMessages.slice(-6).map(m => ({
+          chatHistory: historyMessages.slice(-aiHistoryLength).map(m => ({
             sender: m.isPage ? "Shop" : "Khách hàng",
             text: m.message
           })),
@@ -876,7 +896,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
             pageName: selectedPage.name,
             customerName: selectedThread.customerName,
             lastMessage: messageContent,
-            chatHistory: updatedMessages.slice(-5).map(m => ({
+            chatHistory: updatedMessages.slice(-aiHistoryLength).map(m => ({
               sender: m.isPage ? "Shop" : "Khách hàng",
               text: m.message
             })),
@@ -951,7 +971,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
           pageName: selectedPage.name,
           customerName: selectedThread.customerName,
           lastMessage: lastCustomerMsg.message,
-          chatHistory: selectedThread.messages.slice(-5).map(m => ({
+          chatHistory: selectedThread.messages.slice(-aiHistoryLength).map(m => ({
             sender: m.isPage ? "Shop" : "Khách hàng",
             text: m.message
           })),
@@ -1112,7 +1132,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs flex flex-col h-[calc(100vh-130px)]">
+    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs flex flex-col h-[calc(100vh-112px)] md:h-[calc(100vh-130px)]">
       
       {/* Top Header Controls */}
       <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50/70 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
@@ -1243,7 +1263,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
       <div className="flex-1 flex overflow-hidden min-h-0">
         
         {/* Left Side: Threads list */}
-        <div className="w-80 border-r border-slate-100 flex flex-col bg-slate-50/20">
+        <div className={`w-full md:w-80 border-r border-slate-100 flex flex-col bg-slate-50/20 ${selectedThread ? "hidden md:flex" : "flex"}`}>
           
           {/* Threads search bar */}
           <div className="p-3 border-b border-slate-100/80 flex items-center gap-2">
@@ -1353,12 +1373,19 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
         </div>
 
         {/* Right Side: Chat message detail pane */}
-        <div className="flex-1 flex flex-col bg-white overflow-hidden">
+        <div className={`flex-1 flex flex-col bg-white overflow-hidden ${selectedThread ? "flex" : "hidden md:flex"}`}>
           {selectedThread ? (
             <>
               {/* Active Conversation Header */}
-              <div id="msg-header" className="px-5 py-3 border-b border-slate-100 bg-white flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
+              <div id="msg-header" className="px-4 py-3 border-b border-slate-100 bg-white flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  {/* Back button on mobile */}
+                  <button
+                    onClick={() => setSelectedThread(null)}
+                    className="md:hidden p-1.5 -ml-1.5 hover:bg-slate-100 rounded-lg text-slate-500 cursor-pointer mr-0.5"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
                   <img 
                     src={selectedThread.customerAvatar} 
                     alt={selectedThread.customerName} 
@@ -1764,6 +1791,34 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
               />
               <p className="text-[10px] text-slate-400 italic leading-tight">
                 AI sẽ tham chiếu kiến thức này khi trả lời tự động cho khách hàng của bạn.
+              </p>
+            </div>
+
+            {/* Context Memory Length */}
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-3xs space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-750">Độ dài ngữ cảnh hội thoại</span>
+                <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-md border border-indigo-150">
+                  {aiHistoryLength} tin nhắn
+                </span>
+              </div>
+              <input
+                id="range-ai-history-length"
+                type="range"
+                min={1}
+                max={20}
+                step={1}
+                value={aiHistoryLength}
+                onChange={(e) => handleChangeHistoryLength(parseInt(e.target.value, 10))}
+                className="w-full h-1.5 bg-slate-250 rounded-lg appearance-none cursor-pointer accent-indigo-600 focus:outline-none"
+              />
+              <div className="flex justify-between text-[9px] text-slate-400 font-medium">
+                <span>Ngắn (1 tin)</span>
+                <span>Vừa (10 tin)</span>
+                <span>Dài (20 tin)</span>
+              </div>
+              <p className="text-[10px] text-slate-400 italic leading-tight">
+                Cấu hình số tin nhắn gần nhất AI sẽ xem xét để nhớ ngữ cảnh trò chuyện, giúp trả lời liền mạch và không bị trùng lặp thông tin.
               </p>
             </div>
 
