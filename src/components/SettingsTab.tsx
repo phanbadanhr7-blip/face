@@ -16,8 +16,15 @@ import {
   Code,
   ExternalLink,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  MapPin,
+  Phone,
+  Globe,
+  Clock,
+  Info
 } from "lucide-react";
+import { getStoredPages, setStoredPages } from "../firebase";
+import { FacebookPage } from "../types";
 
 export default function SettingsTab() {
   // LLM Config State
@@ -39,6 +46,67 @@ export default function SettingsTab() {
   const [showApiKey, setShowApiKey] = useState(false);
   const [testingLlm, setTestingLlm] = useState(false);
   const [testSuccess, setTestSuccess] = useState<boolean | null>(null);
+
+  // Page Contact Details State
+  const [pagesList, setPagesList] = useState<FacebookPage[]>(() => getStoredPages());
+  const [selectedPageId, setSelectedPageId] = useState<string>("");
+  const [pageAddress, setPageAddress] = useState("");
+  const [pagePhone, setPagePhone] = useState("");
+  const [pageWebsite, setPageWebsite] = useState("");
+  const [pageHours, setPageHours] = useState("");
+  const [pageNotes, setPageNotes] = useState("");
+  const [savePageStatus, setSavePageStatus] = useState<string | null>(null);
+
+  // Select first connected page automatically on load
+  useEffect(() => {
+    if (pagesList.length > 0 && !selectedPageId) {
+      const active = pagesList.find(p => p.isConnected) || pagesList[0];
+      setSelectedPageId(active.id);
+    }
+  }, [pagesList, selectedPageId]);
+
+  // Sync specific contact info fields when the selected Page changes
+  useEffect(() => {
+    if (!selectedPageId) return;
+    const page = pagesList.find(p => p.id === selectedPageId);
+    if (page) {
+      setPageAddress(localStorage.getItem(`fb_page_address_${selectedPageId}`) || (page as any).address || "");
+      setPagePhone(localStorage.getItem(`fb_page_phone_${selectedPageId}`) || (page as any).phone || "");
+      setPageWebsite(localStorage.getItem(`fb_page_website_${selectedPageId}`) || (page as any).website || "");
+      setPageHours(localStorage.getItem(`fb_page_hours_${selectedPageId}`) || (page as any).hours || "");
+      setPageNotes(localStorage.getItem(`fb_page_notes_${selectedPageId}`) || (page as any).notes || "");
+    }
+  }, [selectedPageId, pagesList]);
+
+  const handleSavePageContact = () => {
+    if (!selectedPageId) return;
+
+    localStorage.setItem(`fb_page_address_${selectedPageId}`, pageAddress);
+    localStorage.setItem(`fb_page_phone_${selectedPageId}`, pagePhone);
+    localStorage.setItem(`fb_page_website_${selectedPageId}`, pageWebsite);
+    localStorage.setItem(`fb_page_hours_${selectedPageId}`, pageHours);
+    localStorage.setItem(`fb_page_notes_${selectedPageId}`, pageNotes);
+
+    const updated = pagesList.map(p => {
+      if (p.id === selectedPageId) {
+        return {
+          ...p,
+          address: pageAddress,
+          phone: pagePhone,
+          website: pageWebsite,
+          hours: pageHours,
+          notes: pageNotes
+        } as any;
+      }
+      return p;
+    });
+
+    setPagesList(updated);
+    setStoredPages(updated);
+
+    setSavePageStatus("success");
+    setTimeout(() => setSavePageStatus(null), 3000);
+  };
 
   // Custom Model Dynamic Fetching State
   const [fetchedCustomModels, setFetchedCustomModels] = useState<{ id: string; name: string }[]>([]);
@@ -583,6 +651,136 @@ export default function SettingsTab() {
               <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-xl flex items-center gap-2.5 text-xs text-slate-500">
                 <AlertTriangle className="w-4.5 h-4.5 text-slate-400 shrink-0" />
                 <span>Kênh Zalo OA hiện đang tắt. Nhấp vào công tắc ở trên nếu bạn muốn kích hoạt đồng bộ hóa và quản trị AI cho Zalo.</span>
+              </div>
+            )}
+          </div>
+
+          {/* Card 2.5: Connected Page Contact Info Setup */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs space-y-4">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+              <MapPin className="w-5 h-5 text-indigo-600" />
+              <div>
+                <h3 className="font-bold text-sm text-slate-800">Thông Tin Liên Hệ Cửa Hàng / Fanpage</h3>
+                <p className="text-[11px] text-slate-400">Cấu hình địa chỉ, hotline, website cho từng Fanpage để AI bám sát và trả lời chính xác</p>
+              </div>
+            </div>
+
+            {pagesList.length > 0 ? (
+              <div className="space-y-4">
+                {/* Select Page Dropdown */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">Chọn Fanpage Cấu Hình</label>
+                  <select
+                    value={selectedPageId}
+                    onChange={(e) => setSelectedPageId(e.target.value)}
+                    className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2.5 bg-slate-50/50 hover:bg-white text-slate-800 font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
+                  >
+                    {pagesList.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name} {p.isConnected ? "(Đang kết nối)" : ""}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Grid Inputs */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Store Address */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                      Địa chỉ Cửa hàng / Văn phòng
+                    </label>
+                    <input
+                      type="text"
+                      value={pageAddress}
+                      onChange={(e) => setPageAddress(e.target.value)}
+                      placeholder="Ví dụ: 125 Huỳnh Thúc Kháng, Mũi Né, Phan Thiết"
+                      className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50/20 text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Phone / Hotline */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                      <Phone className="w-3.5 h-3.5 text-slate-400" />
+                      Số điện thoại Hotline
+                    </label>
+                    <input
+                      type="text"
+                      value={pagePhone}
+                      onChange={(e) => setPagePhone(e.target.value)}
+                      placeholder="Ví dụ: 0901 234 567"
+                      className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50/20 text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Website / Links */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                      <Globe className="w-3.5 h-3.5 text-slate-400" />
+                      Website / Link Landing Page
+                    </label>
+                    <input
+                      type="text"
+                      value={pageWebsite}
+                      onChange={(e) => setPageWebsite(e.target.value)}
+                      placeholder="Ví dụ: https://maytinhmuine.com"
+                      className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50/20 text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Business Hours */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      Giờ mở cửa / Làm việc
+                    </label>
+                    <input
+                      type="text"
+                      value={pageHours}
+                      onChange={(e) => setPageHours(e.target.value)}
+                      placeholder="Ví dụ: 8:00 - 21:00 hàng ngày"
+                      className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50/20 text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Additional Notes */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                    <Info className="w-3.5 h-3.5 text-slate-400" />
+                    Ghi chú / Khuyến mãi hiện hành
+                  </label>
+                  <textarea
+                    value={pageNotes}
+                    onChange={(e) => setPageNotes(e.target.value)}
+                    rows={3}
+                    placeholder="Ví dụ: Miễn phí vệ sinh laptop cho học sinh sinh viên; giảm 10% khi đặt lịch trước..."
+                    className="w-full text-xs border border-slate-200 rounded-xl p-3 bg-slate-50/20 text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none leading-relaxed transition-all"
+                  />
+                </div>
+
+                {savePageStatus === "success" && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-150 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1.5 animate-fade-in">
+                    <Check className="w-4.5 h-4.5 text-emerald-600 shrink-0" />
+                    Đã lưu thành công thông tin liên hệ cho Fanpage này!
+                  </div>
+                )}
+
+                {/* Action button */}
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={handleSavePageContact}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    Lưu Thông Tin Liên Hệ
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center text-xs text-slate-500">
+                ⚠️ Không tìm thấy Fanpage nào được kết nối. Vui lòng kết nối trang trước khi thiết lập thông tin liên hệ!
               </div>
             )}
           </div>

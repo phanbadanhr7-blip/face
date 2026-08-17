@@ -46,6 +46,13 @@ export default function AiPromptTab({ pages }: AiPromptTabProps) {
   const [historyLength, setHistoryLength] = useState(5);
   const [selectedNicheId, setSelectedNicheId] = useState<string>("custom");
 
+  // Page contact details cache (synced from Settings)
+  const [pageAddress, setPageAddress] = useState("");
+  const [pagePhone, setPagePhone] = useState("");
+  const [pageWebsite, setPageWebsite] = useState("");
+  const [pageHours, setPageHours] = useState("");
+  const [pageNotes, setPageNotes] = useState("");
+
   // Playground state
   const [mockCustomerName, setMockCustomerName] = useState("Nguyễn Văn A");
   const [mockMessage, setMockMessage] = useState("");
@@ -158,6 +165,20 @@ Khuyến mãi: Khách đi nhóm 2 người trở lên được tặng voucher ng
     if (!selectedPage) return;
     const settingsKey = `fb_page_ai_settings_${selectedPage.id}`;
     const saved = localStorage.getItem(settingsKey);
+
+    // Sync page specific contact details
+    const addr = localStorage.getItem(`fb_page_address_${selectedPage.id}`) || (selectedPage as any).address || "";
+    const ph = localStorage.getItem(`fb_page_phone_${selectedPage.id}`) || (selectedPage as any).phone || "";
+    const web = localStorage.getItem(`fb_page_website_${selectedPage.id}`) || (selectedPage as any).website || "";
+    const hrs = localStorage.getItem(`fb_page_hours_${selectedPage.id}`) || (selectedPage as any).hours || "";
+    const nts = localStorage.getItem(`fb_page_notes_${selectedPage.id}`) || (selectedPage as any).notes || "";
+    
+    setPageAddress(addr);
+    setPagePhone(ph);
+    setPageWebsite(web);
+    setPageHours(hrs);
+    setPageNotes(nts);
+
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -474,6 +495,38 @@ Khuyến mãi: Khách đi nhóm 2 người trở lên được tặng voucher ng
               <p className="text-[11px] text-slate-400 leading-normal">
                 Nạp toàn bộ thông tin về địa chỉ, bảng giá dịch vụ, kích thước sản phẩm và quy chuẩn tư vấn của riêng bạn vào khung dưới. Đây là nguồn kiến thức duy nhất để AI bám sát và trả lời.
               </p>
+
+              {/* Quick sync helper for contact details */}
+              {(pageAddress || pagePhone || pageWebsite || pageHours) && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-700 flex items-center gap-1">
+                      📍 Thông tin liên hệ đã cấu hình:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        let appendText = "\n\n=== THÔNG TIN LIÊN HỆ CỬA HÀNG ===\n";
+                        if (pageAddress) appendText += `- Địa chỉ: ${pageAddress}\n`;
+                        if (pagePhone) appendText += `- Hotline: ${pagePhone}\n`;
+                        if (pageWebsite) appendText += `- Website: ${pageWebsite}\n`;
+                        if (pageHours) appendText += `- Giờ hoạt động: ${pageHours}\n`;
+                        if (pageNotes) appendText += `- Ghi chú bổ sung: ${pageNotes}\n`;
+                        setCustomInstructions(prev => prev + appendText);
+                      }}
+                      className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-150 rounded px-2 py-1 flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      ➕ Chèn nhanh vào Kiến thức
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-slate-600 leading-normal">
+                    {pageAddress && <span className="truncate">🏠 <strong>Địa chỉ:</strong> {pageAddress}</span>}
+                    {pagePhone && <span className="truncate">📞 <strong>Hotline:</strong> {pagePhone}</span>}
+                    {pageWebsite && <span className="truncate">🌐 <strong>Website:</strong> {pageWebsite}</span>}
+                    {pageHours && <span className="truncate">⏰ <strong>Giờ làm việc:</strong> {pageHours}</span>}
+                  </div>
+                </div>
+              )}
 
               <textarea
                 value={customInstructions}
