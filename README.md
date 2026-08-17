@@ -8,6 +8,8 @@ Chào mừng bạn đến với hệ thống quản lý Fanpage chuyên nghiệp
 
 ### 1. 🔗 Kết Nối & Quản Lý Nhiều Trang & Tài Khoản Facebook (Multi-Account Support)
 * **Kết nối đa tài khoản:** Hỗ trợ kết nối và nhận diện độc lập giữa nhiều tài khoản Facebook cá nhân hoặc doanh nghiệp khác nhau (ví dụ: Tài khoản Doanh nghiệp, Cá nhân, Spa/Mỹ phẩm...).
+* **Tự động nhận diện Tên Tài khoản:** Khi kết nối bằng Access Token hoặc đăng nhập OAuth, hệ thống sẽ tự động gọi API Graph (`/me`) để lấy chính xác **Họ & Tên của tài khoản Facebook cá nhân** quản lý và gán tương ứng, không còn bị cố định nhãn mặc định.
+* **Tùy biến tên liên kết thủ công:** Cung cấp thêm ô nhập *Tên tài khoản Facebook (Cá nhân liên kết)* tại tab thêm thủ công để bạn dễ dàng phân nhóm và quản lý theo chủ sở hữu.
 * **Bộ lọc Tài khoản thông minh:** Tích hợp bộ lọc tài khoản trực quan cho phép bạn xem nhanh các trang Fanpage thuộc sở hữu của từng tài khoản riêng biệt để dễ dàng kiểm soát.
 * **Nhãn tài khoản trên toàn hệ thống:** Các tab Messenger, Tạo bài viết, AI Prompt và Báo cáo đều hỗ trợ hiển thị phân loại rõ ràng theo Trang và Tài khoản quản lý tương ứng.
 * **Chế độ Demo/Live:** Hỗ trợ kết nối linh hoạt giữa chế độ **Live Facebook** (sử dụng Facebook Access Token và Page ID thật) và **Demo Mode** (chế độ trải nghiệm thử nghiệm).
@@ -39,7 +41,11 @@ Chào mừng bạn đến với hệ thống quản lý Fanpage chuyên nghiệp
 ### 5. 📝 Tạo Bài Viết Fanpage Tự Động Bằng AI
 * Chỉ cần nhập ý tưởng ngắn gọn, trợ lý AI sẽ tự động soạn thảo và biên tập các bài viết chất lượng cao đầy thu hút (bao gồm cả tiêu đề, nội dung chi tiết và các hashtag xu hướng).
 
-### 6. 📱 Thiết Kế Tương Thích Di Động Tuyệt Đối (Responsive Mobile First)
+### 6. 📊 Quản lý & Thống kê Bài viết Chuẩn xác (Post Analytics & Metrics)
+* **Thông số thực tế bắt đầu từ 0:** Đã loại bỏ hoàn toàn các thông số ngẫu nhiên mặc định cho bài viết mới. Mọi chỉ số (Xem bài, Tiếp cận, Thích, Bình luận, Chia sẻ) đều được thiết lập về `0` và chỉ bắt đầu tính thực tế kể từ thời điểm bài viết được xuất bản chính thức lên Facebook.
+* **Tích hợp chỉ số Chia sẻ (Shares):** Hiển thị rõ ràng số lượt chia sẻ của từng bài viết trực tiếp trên giao diện danh sách, giúp tính toán Tỷ lệ tương tác chính xác 100% so với thông số tổng hợp trên bảng báo cáo.
+
+### 7. 📱 Thiết Kế Tương Thích Di Động Tuyệt Đối (Responsive Mobile First)
 * Giao diện tối ưu hóa hoàn hảo cho các thiết bị điện thoại di động và máy tính bảng:
   * **Menu Drawer trượt:** Thanh menu điều hướng bên trái dạng ẩn/hiện thông minh giúp màn hình hiển thị rộng rãi.
   * **Trải nghiệm Single-View trên Mobile:** Chế độ chuyển đổi tự động giữa *Danh sách chat* và *Khung chat chi tiết* kèm theo nút "Quay lại" (Mũi tên trái) mượt mà như ứng dụng di động bản xứ.
