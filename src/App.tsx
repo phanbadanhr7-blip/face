@@ -154,6 +154,16 @@ export default function App() {
     }
   };
 
+  const handleClearAllData = () => {
+    if (window.confirm("Bạn có chắc chắn muốn ngắt kết nối toàn bộ Trang và xóa sạch dữ liệu lưu trữ để sẵn sàng kết nối tài khoản Facebook mới không?")) {
+      setPages([]);
+      setStoredPages([]);
+      localStorage.removeItem("facebook_manager_pages");
+      localStorage.removeItem("facebook_manager_posts");
+      window.location.reload();
+    }
+  };
+
   const handleSetDefaultPage = async (id: string) => {
     setPages((prevPages) => {
       const nextPages = prevPages.map(p => ({
@@ -471,6 +481,7 @@ export default function App() {
             onAddPage={handleAddPage}
             onDisconnectPage={handleDisconnectPage}
             onSetDefaultPage={handleSetDefaultPage}
+            onClearAllData={handleClearAllData}
           />
         );
       case "messenger":
@@ -513,6 +524,7 @@ export default function App() {
             onAddPage={handleAddPage}
             onDisconnectPage={handleDisconnectPage}
             onSetDefaultPage={handleSetDefaultPage}
+            onClearAllData={handleClearAllData}
           />
         );
     }

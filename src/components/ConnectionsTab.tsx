@@ -7,7 +7,6 @@ import {
   Check, 
   Trash2, 
   SlidersHorizontal,
-  ExternalLink,
   ShieldCheck,
   Facebook,
   KeyRound,
@@ -20,6 +19,7 @@ interface ConnectionsTabProps {
   onAddPage: (page: Omit<FacebookPage, "id" | "createdAt" | "isConnected"> & { id?: string }) => void;
   onDisconnectPage: (id: string) => void;
   onSetDefaultPage: (id: string) => void;
+  onClearAllData?: () => void;
 }
 
 const STOCK_AVATARS = [
@@ -29,7 +29,7 @@ const STOCK_AVATARS = [
   "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=150&auto=format&fit=crop&q=60", // Developer
 ];
 
-export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onSetDefaultPage }: ConnectionsTabProps) {
+export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onSetDefaultPage, onClearAllData }: ConnectionsTabProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
@@ -249,6 +249,15 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
           <p className="text-sm text-slate-500 mt-1">Quản lý hồ sơ Fanpage và các tích hợp mạng xã hội</p>
         </div>
         <div className="flex items-center gap-2">
+          {onClearAllData && (
+            <button 
+              onClick={onClearAllData}
+              className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-sm font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Xóa sạch dữ liệu lưu trữ để đăng nhập một tài khoản Facebook mới"
+            >
+              <span>Xóa bộ nhớ & Đăng xuất</span>
+            </button>
+          )}
           <button 
             onClick={() => { setActiveModalTab("oauth"); setShowAddModal(true); }}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
@@ -256,16 +265,6 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
             <Plus className="w-4 h-4" />
             <span>Kết Nối Kênh Mới</span>
           </button>
-          <a
-            href="https://ais-dev-qv2ignianzzncmdt66dz5z-876098673256.asia-southeast1.run.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-sm font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-            title="Mở ứng dụng ở Tab trình duyệt độc lập để tránh bị chặn OAuth bởi iframe"
-          >
-            <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-            <span>Mở Tab Riêng</span>
-          </a>
         </div>
       </div>
 
