@@ -344,6 +344,22 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
       });
       const updated = Array.from(new Set([...current, ...idsToAdd]));
       localStorage.setItem(`fb_deleted_threads_${pageId}`, JSON.stringify(updated));
+
+      // Save metadata of the last message in this thread when it was deleted
+      const lastMsg = thread.messages && thread.messages.length > 0 ? thread.messages[thread.messages.length - 1] : null;
+      if (lastMsg) {
+        const deletedMetaRaw = localStorage.getItem(`fb_deleted_threads_meta_${pageId}`);
+        let deletedMeta = {};
+        try {
+          deletedMeta = deletedMetaRaw ? JSON.parse(deletedMetaRaw) : {};
+        } catch {}
+        (deletedMeta as any)[thread.id] = {
+          lastMessageId: lastMsg.id,
+          timestamp: lastMsg.timestamp,
+          text: lastMsg.message
+        };
+        localStorage.setItem(`fb_deleted_threads_meta_${pageId}`, JSON.stringify(deletedMeta));
+      }
     } catch (e) {
       console.error("Failed to persist deleted thread id:", e);
     }
@@ -353,15 +369,31 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
     try {
       const current = getDeletedThreadIds(pageId);
       const idsToAdd: string[] = [];
+      const deletedMetaRaw = localStorage.getItem(`fb_deleted_threads_meta_${pageId}`);
+      let deletedMeta = {};
+      try {
+        deletedMeta = deletedMetaRaw ? JSON.parse(deletedMetaRaw) : {};
+      } catch {}
+
       currentThreads.forEach(t => {
         idsToAdd.push(t.id);
         idsToAdd.push(t.id.replace(/^t_/, ""));
         t.messages.forEach(m => {
           if (m.senderId && !m.isPage) idsToAdd.push(m.senderId);
         });
+
+        const lastMsg = t.messages && t.messages.length > 0 ? t.messages[t.messages.length - 1] : null;
+        if (lastMsg) {
+          (deletedMeta as any)[t.id] = {
+            lastMessageId: lastMsg.id,
+            timestamp: lastMsg.timestamp,
+            text: lastMsg.message
+          };
+        }
       });
       const updated = Array.from(new Set([...current, ...idsToAdd]));
       localStorage.setItem(`fb_deleted_threads_${pageId}`, JSON.stringify(updated));
+      localStorage.setItem(`fb_deleted_threads_meta_${pageId}`, JSON.stringify(deletedMeta));
       localStorage.setItem(`fb_inbox_cleared_${pageId}`, "true");
     } catch (e) {
       console.error("Failed to persist clear inbox:", e);
@@ -370,6 +402,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
 
   const clearDeletedBlacklist = (pageId: string) => {
     localStorage.removeItem(`fb_deleted_threads_${pageId}`);
+    localStorage.removeItem(`fb_deleted_threads_meta_${pageId}`);
     localStorage.removeItem(`fb_inbox_cleared_${pageId}`);
   };
 
@@ -539,14 +572,65 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        if (!silent && data.error) {
-          setLiveSyncError(data.error);
-        }
+        setLiveSyncError(data.error || "Không thể tải tin nhắn từ Facebook. Vui lòng kiểm tra lại quyền.");
         return;
       }
 
       if (data.threads && Array.isArray(data.threads)) {
-        const deletedIds = getDeletedThreadIds(selectedPage.id);
+        let deletedIds = getDeletedThreadIds(selectedPage.id);
+        const deletedMetaRaw = localStorage.getItem(`fb_deleted_threads_meta_${selectedPage.id}`);
+        let deletedMeta = {};
+        try {
+          deletedMeta = deletedMetaRaw ? JSON.parse(deletedMetaRaw) : {};
+        } catch {}
+
+        let blacklistChanged = false;
+        const updatedDeletedIds = [...deletedIds];
+
+        data.threads.forEach((t: ChatThread) => {
+          const cleanId = t.id.replace(/^t_/, "");
+          const isBlacklisted = updatedDeletedIds.includes(t.id) || updatedDeletedIds.includes(cleanId);
+          
+          if (isBlacklisted) {
+            const lastMsg = t.messages && t.messages.length > 0 ? t.messages[t.messages.length - 1] : null;
+            if (lastMsg) {
+              const saved = (deletedMeta as any)[t.id] || (deletedMeta as any)[cleanId];
+              // If there's new activity (different message ID, different timestamp, or different text)
+              const isNewMessage = !saved || 
+                (saved.lastMessageId && saved.lastMessageId !== lastMsg.id) || 
+                (saved.timestamp && saved.timestamp !== lastMsg.timestamp) || 
+                (saved.text && saved.text !== lastMsg.message);
+              
+              if (isNewMessage) {
+                // Remove thread IDs from deleted blacklist
+                const idx1 = updatedDeletedIds.indexOf(t.id);
+                if (idx1 > -1) updatedDeletedIds.splice(idx1, 1);
+                const idx2 = updatedDeletedIds.indexOf(cleanId);
+                if (idx2 > -1) updatedDeletedIds.splice(idx2, 1);
+                
+                // Also remove customer's senderId from the blacklist if it was added
+                if (lastMsg.senderId) {
+                  const idx3 = updatedDeletedIds.indexOf(lastMsg.senderId);
+                  if (idx3 > -1) updatedDeletedIds.splice(idx3, 1);
+                }
+
+                // Remove from metadata too
+                delete (deletedMeta as any)[t.id];
+                delete (deletedMeta as any)[cleanId];
+                blacklistChanged = true;
+              }
+            }
+          }
+        });
+
+        if (blacklistChanged) {
+          deletedIds = updatedDeletedIds;
+          localStorage.setItem(`fb_deleted_threads_${selectedPage.id}`, JSON.stringify(updatedDeletedIds));
+          localStorage.setItem(`fb_deleted_threads_meta_${selectedPage.id}`, JSON.stringify(deletedMeta));
+          // If we had a cleared state, turn it off since a new thread is now active
+          localStorage.removeItem(`fb_inbox_cleared_${selectedPage.id}`);
+        }
+
         const activeThreads = data.threads.filter((t: ChatThread) => {
           const cleanId = t.id.replace(/^t_/, "");
           return !deletedIds.includes(t.id) && !deletedIds.includes(cleanId);
