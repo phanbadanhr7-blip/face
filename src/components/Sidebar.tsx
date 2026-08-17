@@ -7,7 +7,8 @@ import {
   BookOpen, 
   Sparkles,
   X,
-  Settings
+  Settings,
+  Bot
 } from "lucide-react";
 
 interface SidebarProps {
@@ -22,6 +23,7 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen = false, onClo
     { id: "connections", name: "Kết nối Trang", icon: Link2 },
     { id: "messenger", name: "Hộp thư Messenger", icon: Inbox },
     { id: "create-post", name: "Tạo bài viết AI", icon: Sparkles },
+    { id: "ai-prompt", name: "Kịch bản & Gợi ý AI", icon: Bot },
     { id: "posts-analytics", name: "Quản lý & Thống kê Bài viết", icon: BarChart3 },
     { id: "settings", name: "Cấu hình Hệ thống", icon: Settings },
   ];

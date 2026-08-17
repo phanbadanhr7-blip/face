@@ -17,20 +17,23 @@ Chào mừng bạn đến với hệ thống quản lý Fanpage chuyên nghiệp
   * Khi bạn bấm **Xóa hội thoại**, hệ thống sẽ ẩn tạm thời cuộc trò chuyện đó khỏi danh sách để làm sạch hộp thư.
   * **Tự động khôi phục (Auto-Restore):** Ngay khi khách hàng gửi một tin nhắn mới hoặc có hoạt động chat mới phát sinh, hệ thống sẽ tự động đối chiếu thông tin, gỡ hội thoại khỏi danh sách ẩn và đưa cuộc chat trở lại màn hình chính của bạn ngay lập tức.
 
-### 3. 🤖 Trợ Lý Trí Tuệ Nhân Tạo (AI Assistant - Gemini)
+### 3. 🤖 Trợ Lý Trí Tuệ Nhân Tạo (AI Assistant - Gemini & Multi-Provider)
+* **Tương thích đa nhà cung cấp cực kỳ linh hoạt (Multi-Provider):** Ngoài **Google Gemini** mặc định, hệ thống hỗ trợ tích hợp hoàn hảo với **OpenAI (ChatGPT)**, **Anthropic Claude**, **DeepSeek AI** và các **Nhà cung cấp tùy chỉnh** (Ollama, OpenRouter, LM Studio, TogetherAI, v.v.).
+* **Tự động tải danh sách mô hình thực tế từ API (Dynamic Model Fetching):** Đối với các máy chủ tùy chỉnh, hệ thống hỗ trợ nút 🔄 **"Tải danh sách mô hình"** kết nối trực tiếp đến endpoint `${BaseURL}/models` để tự động nạp toàn bộ danh sách các mô hình đang hoạt động trên máy chủ của bạn để bạn chọn nhanh chỉ bằng 1 nhấp chuột.
 * **Chế độ tự động phản hồi (Autopilot):** Khi kích hoạt, AI sẽ thay thế bạn tự động phân tích câu hỏi của khách hàng trên Messenger và phản hồi ngay lập tức 24/7.
-* **Tùy chọn phong cách trả lời (AI Tone & Persona):** Tự động chuyển đổi phong cách giao tiếp linh hoạt:
-  * *Tiêu chuẩn:* Chu đáo, lịch sự, chuyên nghiệp.
-  * *Chốt đơn:* Thuyết phục, thu hút, tập trung vào ưu đãi.
-  * *Kỹ thuật:* Kiến nhẫn, chi tiết, mang tính hỗ trợ cao.
-  * *Thân thiện:* Hài hước, gần gũi, cởi mở.
-* **Kho tri thức riêng biệt (Knowledge Base):** Nhập trực tiếp thông tin cửa hàng, địa chỉ, bảng giá dịch vụ, số điện thoại nóng của bạn... AI sẽ dựa trên dữ liệu độc quyền này để tư vấn khách hàng chính xác nhất mà không lo bị trả lời sai lệch thông tin.
-* **AI gợi ý soạn thảo:** Đề xuất nội dung trả lời mẫu chỉ với một lần nhấp chuột để quản trị viên duyệt trước khi gửi đi.
 
-### 4. 📝 Tạo Bài Viết Fanpage Tự Động Bằng AI
+### 4. 🧠 Phòng Thiết Lập Kịch Bản & Gợi Ý AI (AI Prompt & Persona Studio)
+* **Thư viện mẫu lĩnh vực kinh doanh (Niche Templates):** Tự động khởi tạo cấu trúc tri thức và từ vựng chuyên môn cho các ngành hàng: *Máy tính & Công nghệ (Sửa chữa, cài win dạo, ổ SSD)*, *Thời trang & Mỹ phẩm*, *Bất động sản & Villa*, *Nhà hàng & Quán ăn*, *Spa & Thẩm mỹ viện*, hay *Tự cấu hình (Custom)*.
+* **Bộ nhớ ngữ cảnh & Giọng điệu thông minh:**
+  * Điều chỉnh linh hoạt số lượng tin nhắn quá khứ mà AI ghi nhớ để duy trì cuộc hội thoại liên tục (lên tới 20 tin nhắn gần nhất).
+  * Chuyển đổi giọng điệu linh hoạt theo mục đích: *Lịch sự/Chuyên nghiệp (Standard)*, *Chốt đơn (Sales)*, *Hài hước/Trẻ trung (Playful)*, và *Ân cần hỗ trợ (Support)*.
+* **Nạp tri thức độc quyền (Knowledge Base):** Khung nạp dữ liệu chi tiết về địa chỉ, bảng giá dịch vụ, số điện thoại nóng... giúp Trợ lý AI trả lời khách hàng chuẩn xác 100%, không lo đoán mò hay trả lời sai lệch thông tin.
+* **Phòng thử nghiệm giả lập (Playground):** Cung cấp hộp thử nghiệm giả lập cục bộ nằm bên phải màn hình để bạn nhập tin nhắn của khách hàng giả lập và xem trước câu trả lời của AI một cách trực quan, mượt mà trước khi áp dụng thực tế.
+
+### 5. 📝 Tạo Bài Viết Fanpage Tự Động Bằng AI
 * Chỉ cần nhập ý tưởng ngắn gọn, trợ lý AI sẽ tự động soạn thảo và biên tập các bài viết chất lượng cao đầy thu hút (bao gồm cả tiêu đề, nội dung chi tiết và các hashtag xu hướng).
 
-### 5. 📱 Thiết Kế Tương Thích Di Động Tuyệt Đối (Responsive Mobile First)
+### 6. 📱 Thiết Kế Tương Thích Di Động Tuyệt Đối (Responsive Mobile First)
 * Giao diện tối ưu hóa hoàn hảo cho các thiết bị điện thoại di động và máy tính bảng:
   * **Menu Drawer trượt:** Thanh menu điều hướng bên trái dạng ẩn/hiện thông minh giúp màn hình hiển thị rộng rãi.
   * **Trải nghiệm Single-View trên Mobile:** Chế độ chuyển đổi tự động giữa *Danh sách chat* và *Khung chat chi tiết* kèm theo nút "Quay lại" (Mũi tên trái) mượt mà như ứng dụng di động bản xứ.

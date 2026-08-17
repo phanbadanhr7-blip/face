@@ -6,6 +6,7 @@ import MessengerTab from "./components/MessengerTab";
 import CreatePostTab from "./components/CreatePostTab";
 import PostsAndAnalyticsTab from "./components/PostsAndAnalyticsTab";
 import SettingsTab from "./components/SettingsTab";
+import AiPromptTab from "./components/AiPromptTab";
 import { FacebookPage, FacebookPost } from "./types";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { 
@@ -423,6 +424,8 @@ export default function App() {
         );
       case "settings":
         return <SettingsTab />;
+      case "ai-prompt":
+        return <AiPromptTab pages={pages} />;
       default:
         return (
           <ConnectionsTab
@@ -461,6 +464,7 @@ export default function App() {
               {activeTab === "connections" ? "Kết nối Trang" :
                activeTab === "messenger" ? "Hộp thư Messenger" :
                activeTab === "create-post" ? "Tạo bài viết AI" :
+               activeTab === "ai-prompt" ? "Kịch bản & Gợi ý AI" :
                activeTab === "posts-analytics" ? "Quản lý bài viết" : "Cấu hình"}
             </span>
           </div>
