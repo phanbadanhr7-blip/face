@@ -177,6 +177,23 @@ export default function App() {
   };
 
   // Post Publishing / Scheduling Helper
+  const convertBlobUrlToBase64 = async (blobUrl: string): Promise<string> => {
+    if (!blobUrl || !blobUrl.startsWith("blob:")) return blobUrl;
+    try {
+      const res = await fetch(blobUrl);
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.error("Failed to convert blob URL to base64:", err);
+      return blobUrl;
+    }
+  };
+
   const handleAddPost = async (
     newPost: Omit<FacebookPost, "id" | "publishedAt" | "fbPostId" | "error">
   ): Promise<{ success: boolean; fbPostId?: string; error?: string; isSimulated?: boolean }> => {
@@ -190,6 +207,11 @@ export default function App() {
       }
 
       try {
+        let finalMediaUrl = newPost.mediaUrl;
+        if (finalMediaUrl && finalMediaUrl.startsWith("blob:")) {
+          finalMediaUrl = await convertBlobUrlToBase64(finalMediaUrl);
+        }
+
         const response = await fetch("/api/facebook/publish", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -197,7 +219,7 @@ export default function App() {
             pageId: page.id,
             accessToken: page.accessToken,
             message: newPost.message,
-            mediaUrl: newPost.mediaUrl,
+            mediaUrl: finalMediaUrl,
             isMock: isDemoMode
           })
         });
@@ -305,6 +327,11 @@ export default function App() {
     }
 
     try {
+      let finalMediaUrl = post.mediaUrl;
+      if (finalMediaUrl && finalMediaUrl.startsWith("blob:")) {
+        finalMediaUrl = await convertBlobUrlToBase64(finalMediaUrl);
+      }
+
       const response = await fetch("/api/facebook/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -312,7 +339,7 @@ export default function App() {
           pageId: page.id,
           accessToken: page.accessToken,
           message: post.message,
-          mediaUrl: post.mediaUrl,
+          mediaUrl: finalMediaUrl,
           isMock: isDemoMode
         })
       });
