@@ -93,22 +93,16 @@ export default function PostsAndAnalyticsTab({
 
   // Calculate default / realistic metric values for posts that don't have them yet
   const enrichedPosts = useMemo(() => {
-    return posts.map((post, idx) => {
-      // If post is published, ensure it has sensible reach/view numbers based on ID or index
+    return posts.map((post) => {
+      // If post is published, default metrics to 0 unless already fetched/stored
       if (post.status === 'published') {
-        const seed = Math.abs(post.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) + idx * 37);
-        const reach = post.reachCount ?? (850 + (seed % 2800));
-        const views = post.viewsCount ?? (Math.round(reach * 1.55));
-        const likes = post.likesCount ?? (Math.round(reach * 0.08) + 12);
-        const comments = post.commentsCount ?? (Math.round(likes * 0.32) + 3);
-        const shares = post.sharesCount ?? (Math.round(likes * 0.15) + 1);
         return {
           ...post,
-          reachCount: reach,
-          viewsCount: views,
-          likesCount: likes,
-          commentsCount: comments,
-          sharesCount: shares
+          reachCount: post.reachCount ?? 0,
+          viewsCount: post.viewsCount ?? 0,
+          likesCount: post.likesCount ?? 0,
+          commentsCount: post.commentsCount ?? 0,
+          sharesCount: post.sharesCount ?? 0
         };
       }
       return post;
@@ -537,6 +531,19 @@ export default function PostsAndAnalyticsTab({
                             </div>
                             <span className="text-sm font-black text-amber-600">
                               {postComments}
+                            </span>
+                          </div>
+
+                          <div className="w-px h-7 bg-slate-200"></div>
+
+                          {/* Shares */}
+                          <div className="text-center px-1.5">
+                            <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-400 uppercase">
+                              <Share2 className="w-3 h-3 text-teal-500" />
+                              <span>Chia sẻ</span>
+                            </div>
+                            <span className="text-sm font-black text-teal-600">
+                              {postShares}
                             </span>
                           </div>
 

@@ -765,6 +765,18 @@ app.post("/api/facebook/inspect-token", async (req: Request, res: Response) => {
   }
 
   try {
+    // Fetch the active Facebook personal profile/user name
+    let accountName = "MÁY TÍNH MŨI NÉ";
+    try {
+      const meRes = await fetch(`https://graph.facebook.com/v18.0/me?access_token=${encodeURIComponent(token)}&fields=name`);
+      const meData: any = await meRes.json();
+      if (meRes.ok && meData.name) {
+        accountName = meData.name;
+      }
+    } catch (e) {
+      console.warn("Failed to fetch user profile name:", e);
+    }
+
     // 1. Try querying /me/accounts (works with User Access Token)
     const accountsRes = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${encodeURIComponent(token)}&fields=id,name,access_token,picture`);
     const accountsData: any = await accountsRes.json();
@@ -774,6 +786,7 @@ app.post("/api/facebook/inspect-token", async (req: Request, res: Response) => {
         id: p.id,
         name: p.name,
         accessToken: p.access_token,
+        accountName: accountName,
         picture: p.picture?.data?.url || `https://images.unsplash.com/photo-1542751371-adc38448a05e?w=150&auto=format&fit=crop&q=60`
       }));
       return res.json({ success: true, pages });
@@ -788,6 +801,7 @@ app.post("/api/facebook/inspect-token", async (req: Request, res: Response) => {
         id: pageData.id,
         name: pageData.name || "Fanpage Facebook",
         accessToken: token,
+        accountName: pageData.name || accountName,
         picture: pageData.picture?.data?.url || `https://images.unsplash.com/photo-1542751371-adc38448a05e?w=150&auto=format&fit=crop&q=60`
       };
       return res.json({ success: true, pages: [singlePage] });
@@ -802,261 +816,18 @@ app.post("/api/facebook/inspect-token", async (req: Request, res: Response) => {
 
 // API Endpoint to get Facebook Auth URL (Live or Mock/Simulated)
 app.get("/api/auth/facebook/url", (req: Request, res: Response) => {
-  const appId = process.env.FACEBOOK_APP_ID || "1405503574771652";
+  const appId = process.env.FACEBOOK_APP_ID;
   const host = getHostUrl(req);
   const redirectUri = `${host}/auth/facebook/callback`;
 
-  if (appId) {
+  if (appId && appId.trim() !== "") {
     const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=pages_messaging,pages_manage_metadata,pages_manage_posts,pages_read_engagement,pages_show_list`;
     res.json({ url: authUrl, isLive: true, redirectUri });
   } else {
-    res.json({ url: `${host}/auth/facebook/mock-login`, isLive: false, redirectUri });
+    res.status(400).json({ 
+      error: "Cấu hình thiếu FACEBOOK_APP_ID. Để sử dụng đăng nhập Facebook thật, vui lòng thêm FACEBOOK_APP_ID và FACEBOOK_APP_SECRET vào mục Settings (Cài đặt) của AI Studio." 
+    });
   }
-});
-
-// Mock/Simulated Meta Authorization Consent Screen for fast developer demoing
-app.get("/auth/facebook/mock-login", (req: Request, res: Response) => {
-  res.send(`
-    <!doctype html>
-    <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Facebook Multi-Account Login (Demo)</title>
-        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-        <style>
-          body {
-            background-color: #f0f2f5;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-          }
-        </style>
-      </head>
-      <body class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-xl shadow-lg border border-slate-200 max-w-md w-full overflow-hidden">
-          <!-- Header -->
-          <div class="bg-[#1877F2] p-6 text-white flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-2xl font-bold tracking-tight">facebook</span>
-              <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded font-semibold uppercase">Multi-Account Auth</span>
-            </div>
-            <span class="text-xs text-white/80 font-medium">Secure Simulated Portal</span>
-          </div>
-
-          <div class="p-6 space-y-6">
-            <!-- Selector for Facebook Accounts -->
-            <div class="space-y-2">
-              <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block">1. Chọn Tài Khoản Facebook Đăng Nhập</label>
-              <select 
-                id="account-selector" 
-                onchange="handleAccountChange(this.value)"
-                class="w-full text-sm font-semibold border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 text-slate-800 outline-none focus:border-[#1877F2]"
-              >
-                <option value="0">Tài khoản 1: MÁY TÍNH MŨI NÉ (Doanh nghiệp)</option>
-                <option value="1">Tài khoản 2: Nguyễn Văn A (Cá nhân)</option>
-                <option value="2">Tài khoản 3: Trần Thị B (Mỹ phẩm & Spa)</option>
-              </select>
-            </div>
-
-            <!-- Active User Profile Display -->
-            <div class="flex items-center gap-4 border-y border-slate-100 py-4">
-              <div id="account-avatar" class="w-12 h-12 bg-indigo-600 text-white font-bold rounded-full flex items-center justify-center text-lg shadow-sm">
-                MT
-              </div>
-              <div>
-                <p id="account-name" class="text-sm font-bold text-slate-800">MÁY TÍNH MŨI NÉ</p>
-                <p id="account-role" class="text-xs text-slate-500">Quản trị viên doanh nghiệp</p>
-              </div>
-            </div>
-
-            <!-- Pages Selection List -->
-            <div class="space-y-3">
-              <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">2. Chọn các Trang Fanpage muốn kết nối</h3>
-              
-              <div id="pages-container" class="space-y-2 max-h-48 overflow-y-auto">
-                <!-- Pages will be dynamically loaded here by JS -->
-              </div>
-            </div>
-
-            <!-- Footer Buttons -->
-            <div class="flex gap-3 pt-2">
-              <button 
-                type="button" 
-                onclick="window.close()" 
-                class="flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-500 transition-colors cursor-pointer"
-              >
-                Hủy bỏ
-              </button>
-              <button 
-                type="button" 
-                onclick="handleSubmit()" 
-                class="flex-1 py-2.5 bg-[#1877F2] hover:bg-[#1565C0] rounded-lg text-xs font-bold text-white shadow-md transition-colors cursor-pointer"
-              >
-                <span id="submit-btn-text">Tiếp tục kết nối</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <script>
-          const ACCOUNTS = [
-            {
-              name: "MÁY TÍNH MŨI NÉ",
-              avatar: "MT",
-              role: "Quản trị viên doanh nghiệp",
-              avatarColor: "bg-[#1877F2]",
-              pages: [
-                {
-                  id: "10249581837582",
-                  name: "May Tinh Mui Ne",
-                  accessToken: "demo_token_maytinhmuine",
-                  picture: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=150&auto=format&fit=crop&q=60"
-                },
-                {
-                  id: "20938475620192",
-                  name: "Mui Ne Tech Lab",
-                  accessToken: "demo_token_techlab",
-                  picture: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=150&auto=format&fit=crop&q=60"
-                }
-              ]
-            },
-            {
-              name: "Nguyễn Văn A (Cá nhân)",
-              avatar: "VA",
-              role: "Nhà sáng lập / Người sáng tạo nội dung",
-              avatarColor: "bg-emerald-600",
-              pages: [
-                {
-                  id: "30129384756201",
-                  name: "Chợ Phan Thiết Online",
-                  accessToken: "demo_token_phanthiet",
-                  picture: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=150&auto=format&fit=crop&q=60"
-                },
-                {
-                  id: "40129384756202",
-                  name: "Thời Trang Phan Thiết",
-                  accessToken: "demo_token_fashion",
-                  picture: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=60"
-                }
-              ]
-            },
-            {
-              name: "Trần Thị B (Mỹ phẩm & Spa)",
-              avatar: "TB",
-              role: "Chủ thương hiệu mỹ phẩm",
-              avatarColor: "bg-purple-600",
-              pages: [
-                {
-                  id: "50129384756203",
-                  name: "Mỹ Phẩm Cao Cấp Mũi Né",
-                  accessToken: "demo_token_cosmetics",
-                  picture: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=150&auto=format&fit=crop&q=60"
-                },
-                {
-                  id: "60129384756204",
-                  name: "Spa & Beauty Phan Thiết",
-                  accessToken: "demo_token_spa",
-                  picture: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=150&auto=format&fit=crop&q=60"
-                }
-              ]
-            }
-          ];
-
-          let activeAccountIndex = 0;
-
-          function handleAccountChange(val) {
-            activeAccountIndex = parseInt(val);
-            renderAccount();
-          }
-
-          function renderAccount() {
-            const acc = ACCOUNTS[activeAccountIndex];
-            
-            // Render profile info
-            const avatarEl = document.getElementById("account-avatar");
-            avatarEl.className = "w-12 h-12 text-white font-bold rounded-full flex items-center justify-center text-lg shadow-sm " + acc.avatarColor;
-            avatarEl.innerText = acc.avatar;
-            document.getElementById("account-name").innerText = acc.name;
-            document.getElementById("account-role").innerText = acc.role;
-            document.getElementById("submit-btn-text").innerText = "Tiếp tục dưới tên " + acc.name.split(" ")[0];
-
-            // Render pages
-            const container = document.getElementById("pages-container");
-            container.innerHTML = "";
-            
-            acc.pages.forEach((p, idx) => {
-              const label = document.createElement("label");
-              label.className = "flex items-center justify-between p-3 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors";
-              label.innerHTML = \`
-                <div class="flex items-center gap-3">
-                  <img src="\${p.picture}" class="w-9 h-9 rounded-lg object-cover border" />
-                  <div>
-                    <p class="text-xs font-bold text-slate-800">\${p.name}</p>
-                    <p class="text-[10px] text-slate-500">ID: \${p.id}</p>
-                  </div>
-                </div>
-                <input type="checkbox" id="page-idx-\${idx}" checked class="w-4 h-4 accent-[#1877F2] cursor-pointer" />
-              \`;
-              container.appendChild(label);
-            });
-          }
-
-          function handleSubmit() {
-            const acc = ACCOUNTS[activeAccountIndex];
-            const selectedPages = [];
-            
-            acc.pages.forEach((p, idx) => {
-              const chk = document.getElementById("page-idx-" + idx);
-              if (chk && chk.checked) {
-                selectedPages.push({
-                  ...p,
-                  accountName: acc.name,
-                  accountPicture: acc.avatarColor // Use color name as reference
-                });
-              }
-            });
-
-            if (selectedPages.length === 0) {
-              alert("Vui lòng chọn ít nhất 1 trang Fanpage để nhập vào hệ thống.");
-              return;
-            }
-
-            // Transmit with broadcast channel, storage and postMessage
-            try {
-              const bc = new BroadcastChannel('facebook_auth');
-              bc.postMessage({ type: 'FB_AUTH_SUCCESS', pages: selectedPages });
-              bc.close();
-            } catch (e) {
-              console.warn("BroadcastChannel error:", e);
-            }
-
-            try {
-              localStorage.setItem('fb_auth_success', JSON.stringify({ pages: selectedPages, timestamp: Date.now() }));
-            } catch (e) {
-              console.warn("localStorage error:", e);
-            }
-
-            if (window.opener) {
-              try {
-                window.opener.postMessage({ type: 'FB_AUTH_SUCCESS', pages: selectedPages }, '*');
-              } catch (e) {
-                console.warn("postMessage error:", e);
-              }
-            }
-
-            setTimeout(() => {
-              window.close();
-              setTimeout(() => {
-                window.location.href = '/';
-              }, 500);
-            }, 300);
-          }
-
-          // Initial Render
-          renderAccount();
-        </script>
-      </body>
-    </html>
-  `);
 });
 
 // Real Meta Graph API Callback Route
@@ -1100,6 +871,18 @@ app.get("/auth/facebook/callback", async (req: Request, res: Response) => {
 
     const userAccessToken = tokenData.access_token;
 
+    // Fetch Facebook User Profile Name
+    let accountName = "MÁY TÍNH MŨI NÉ";
+    try {
+      const meRes = await fetch(`https://graph.facebook.com/v18.0/me?access_token=${userAccessToken}&fields=name`);
+      const meData: any = await meRes.json();
+      if (meRes.ok && meData.name) {
+        accountName = meData.name;
+      }
+    } catch (e) {
+      console.warn("Failed to fetch user profile name in callback:", e);
+    }
+
     // 2. Query Managed Pages (/me/accounts)
     const pagesUrl = `https://graph.facebook.com/v18.0/me/accounts?access_token=${userAccessToken}&fields=id,name,access_token,picture`;
     const pagesRes = await fetch(pagesUrl);
@@ -1113,6 +896,7 @@ app.get("/auth/facebook/callback", async (req: Request, res: Response) => {
       id: p.id,
       name: p.name,
       accessToken: p.access_token,
+      accountName: accountName,
       picture: p.picture?.data?.url || `https://images.unsplash.com/photo-1542751371-adc38448a05e?w=150&auto=format&fit=crop&q=60`
     }));
 

@@ -80,12 +80,12 @@ const DEFAULT_SAMPLE_POSTS: FacebookPost[] = [
     status: 'published',
     error: null,
     fbPostId: "109848525048293_987654321",
-    viewsCount: 3420,
-    reachCount: 2150,
-    likesCount: 185,
-    commentsCount: 42,
-    sharesCount: 28,
-    clicksCount: 96
+    viewsCount: 0,
+    reachCount: 0,
+    likesCount: 0,
+    commentsCount: 0,
+    sharesCount: 0,
+    clicksCount: 0
   },
   {
     id: "sample_post_2",
@@ -99,12 +99,12 @@ const DEFAULT_SAMPLE_POSTS: FacebookPost[] = [
     status: 'published',
     error: null,
     fbPostId: "109848525048293_123456789",
-    viewsCount: 2890,
-    reachCount: 1820,
-    likesCount: 142,
-    commentsCount: 35,
-    sharesCount: 19,
-    clicksCount: 74
+    viewsCount: 0,
+    reachCount: 0,
+    likesCount: 0,
+    commentsCount: 0,
+    sharesCount: 0,
+    clicksCount: 0
   },
   {
     id: "sample_post_3",
@@ -127,7 +127,16 @@ export const getStoredPosts = (): FacebookPost[] => {
     if (data) {
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        // Reset legacy metrics of sample posts to 0 so they start calculating fresh
+        return parsed.map(post => ({
+          ...post,
+          viewsCount: post.id?.startsWith("sample_") ? 0 : (post.viewsCount ?? 0),
+          reachCount: post.id?.startsWith("sample_") ? 0 : (post.reachCount ?? 0),
+          likesCount: post.id?.startsWith("sample_") ? 0 : (post.likesCount ?? 0),
+          commentsCount: post.id?.startsWith("sample_") ? 0 : (post.commentsCount ?? 0),
+          sharesCount: post.id?.startsWith("sample_") ? 0 : (post.sharesCount ?? 0),
+          clicksCount: post.id?.startsWith("sample_") ? 0 : (post.clicksCount ?? 0)
+        }));
       }
     }
     return DEFAULT_SAMPLE_POSTS;

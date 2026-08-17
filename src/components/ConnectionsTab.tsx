@@ -43,6 +43,7 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
   const [pageName, setPageName] = useState("");
   const [pageId, setPageId] = useState("");
   const [accessToken, setAccessToken] = useState("");
+  const [manualAccountName, setManualAccountName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState(STOCK_AVATARS[0]);
   const [isDefault, setIsDefault] = useState(false);
 
@@ -115,6 +116,7 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
           accessToken: p.accessToken,
           picture: p.picture,
           isDefault: index === 0 && pages.length === 0,
+          accountName: p.accountName || "MÁY TÍNH MŨI NÉ",
         });
       });
 
@@ -142,6 +144,7 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
             accessToken: p.accessToken,
             picture: p.picture,
             isDefault: index === 0 && pages.length === 0,
+            accountName: p.accountName || "MÁY TÍNH MŨI NÉ",
           });
         });
         alert(`Đăng nhập thành công! Đã tự động kết nối ${importedPages.length} trang Facebook.`);
@@ -225,11 +228,13 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
       accessToken: accessToken.trim(),
       picture: avatarUrl,
       isDefault: isDefault,
+      accountName: manualAccountName.trim() || "MÁY TÍNH MŨI NÉ",
     });
 
     setPageName("");
     setPageId("");
     setAccessToken("");
+    setManualAccountName("");
     setAvatarUrl(STOCK_AVATARS[0]);
     setIsDefault(false);
     setShowAddModal(false);
@@ -629,6 +634,19 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
                     placeholder="Ví dụ: 10248591837582" 
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-blue-500"
                     required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Tên tài khoản Facebook (Cá nhân liên kết)
+                  </label>
+                  <input 
+                    type="text" 
+                    value={manualAccountName}
+                    onChange={(e) => setManualAccountName(e.target.value)}
+                    placeholder="Ví dụ: Nguyễn Văn A (Mặc định: MÁY TÍNH MŨI NÉ)" 
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:border-blue-500"
                   />
                 </div>
 
