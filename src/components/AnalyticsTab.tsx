@@ -87,7 +87,7 @@ export default function AnalyticsTab({ pages }: AnalyticsTabProps) {
             className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-hidden"
           >
             {pages.map(page => (
-              <option key={page.id} value={page.name}>{page.name} (Trang Facebook)</option>
+              <option key={page.id} value={page.name}>{page.name} ({page.accountName || "MÁY TÍNH MŨI NÉ"})</option>
             ))}
             <option value="default">Chỉ số chung của hệ thống</option>
           </select>

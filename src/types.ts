@@ -6,6 +6,8 @@ export interface FacebookPage {
   isConnected: boolean;
   createdAt: string;
   isDefault: boolean;
+  accountName?: string;
+  accountPicture?: string;
 }
 
 export interface FacebookPost {

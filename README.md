@@ -6,9 +6,11 @@ Chào mừng bạn đến với hệ thống quản lý Fanpage chuyên nghiệp
 
 ## 🚀 Tính Năng Nổi Bật Hiện Có
 
-### 1. 🔗 Kết Nối & Quản Lý Trang Facebook
-* Hỗ trợ kết nối linh hoạt giữa chế độ **Live Facebook** (sử dụng Facebook Access Token và Page ID thật) và **Demo Mode** (chế độ trải nghiệm thử nghiệm).
-* Quản lý trạng thái kết nối trực quan, cảnh báo chi tiết các lỗi quyền hạn hoặc token hết hạn từ Facebook API để xử lý nhanh chóng.
+### 1. 🔗 Kết Nối & Quản Lý Nhiều Trang & Tài Khoản Facebook (Multi-Account Support)
+* **Kết nối đa tài khoản:** Hỗ trợ kết nối và nhận diện độc lập giữa nhiều tài khoản Facebook cá nhân hoặc doanh nghiệp khác nhau (ví dụ: Tài khoản Doanh nghiệp, Cá nhân, Spa/Mỹ phẩm...).
+* **Bộ lọc Tài khoản thông minh:** Tích hợp bộ lọc tài khoản trực quan cho phép bạn xem nhanh các trang Fanpage thuộc sở hữu của từng tài khoản riêng biệt để dễ dàng kiểm soát.
+* **Nhãn tài khoản trên toàn hệ thống:** Các tab Messenger, Tạo bài viết, AI Prompt và Báo cáo đều hỗ trợ hiển thị phân loại rõ ràng theo Trang và Tài khoản quản lý tương ứng.
+* **Chế độ Demo/Live:** Hỗ trợ kết nối linh hoạt giữa chế độ **Live Facebook** (sử dụng Facebook Access Token và Page ID thật) và **Demo Mode** (chế độ trải nghiệm thử nghiệm).
 
 ### 2. 💬 Hộp Thư Messenger Inbox (Đồng bộ thời gian thực)
 * **Đồng bộ ngầm tự động:** Chu kỳ tự động quét và tải tin nhắn mới từ Facebook mỗi 10 giây.
@@ -17,7 +19,11 @@ Chào mừng bạn đến với hệ thống quản lý Fanpage chuyên nghiệp
   * Khi bạn bấm **Xóa hội thoại**, hệ thống sẽ ẩn tạm thời cuộc trò chuyện đó khỏi danh sách để làm sạch hộp thư.
   * **Tự động khôi phục (Auto-Restore):** Ngay khi khách hàng gửi một tin nhắn mới hoặc có hoạt động chat mới phát sinh, hệ thống sẽ tự động đối chiếu thông tin, gỡ hội thoại khỏi danh sách ẩn và đưa cuộc chat trở lại màn hình chính của bạn ngay lập tức.
 
-### 3. 🤖 Trợ Lý Trí Tuệ Nhân Tạo (AI Assistant - Gemini & Multi-Provider)
+### 3. 📍 Cấu Hình Thông Tin Liên Hệ Cửa Hàng / Fanpage
+* **Thiết lập riêng biệt cho từng Fanpage:** Cho phép nhập và lưu trữ độc lập Địa chỉ cửa hàng, Hotline, Website, Giờ làm việc và Ghi chú khuyến mãi cho từng Fanpage khác nhau.
+* **Đồng bộ hóa 1-Click vào Tri thức AI:** Ngay tại khung kịch bản AI, hệ thống hiển thị tóm tắt thông tin liên hệ của trang đang chọn và cung cấp nút **"Chèn nhanh vào Kiến thức"** giúp nạp toàn bộ thông tin chuẩn xác vào kịch bản AI chỉ trong 1 giây.
+
+### 4. 🤖 Trợ Lý Trí Tuệ Nhân Tạo (AI Assistant - Gemini & Multi-Provider)
 * **Tương thích đa nhà cung cấp cực kỳ linh hoạt (Multi-Provider):** Ngoài **Google Gemini** mặc định, hệ thống hỗ trợ tích hợp hoàn hảo với **OpenAI (ChatGPT)**, **Anthropic Claude**, **DeepSeek AI** và các **Nhà cung cấp tùy chỉnh** (Ollama, OpenRouter, LM Studio, TogetherAI, v.v.).
 * **Tự động tải danh sách mô hình thực tế từ API (Dynamic Model Fetching):** Đối với các máy chủ tùy chỉnh, hệ thống hỗ trợ nút 🔄 **"Tải danh sách mô hình"** kết nối trực tiếp đến endpoint `${BaseURL}/models` để tự động nạp toàn bộ danh sách các mô hình đang hoạt động trên máy chủ của bạn để bạn chọn nhanh chỉ bằng 1 nhấp chuột.
 * **Chế độ tự động phản hồi (Autopilot):** Khi kích hoạt, AI sẽ thay thế bạn tự động phân tích câu hỏi của khách hàng trên Messenger và phản hồi ngay lập tức 24/7.

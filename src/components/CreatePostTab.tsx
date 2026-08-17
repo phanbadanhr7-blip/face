@@ -448,7 +448,7 @@ export default function CreatePostTab({ pages, posts = [], isDemoMode, onAddPost
                   }`}
                 >
                   <img src={page.picture} alt={page.name} className="w-5 h-5 rounded-md object-cover" />
-                  <span>{page.name}</span>
+                  <span>{page.name} ({page.accountName || "MÁY TÍNH MŨI NÉ"})</span>
                 </button>
               ))}
             </div>

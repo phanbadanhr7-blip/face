@@ -112,6 +112,8 @@ export default function App() {
       isConnected: true,
       createdAt: new Date().toISOString(),
       isDefault: newPage.isDefault || pages.length === 0,
+      accountName: newPage.accountName,
+      accountPicture: newPage.accountPicture,
     };
 
     setPages((prevPages) => {

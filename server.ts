@@ -822,7 +822,7 @@ app.get("/auth/facebook/mock-login", (req: Request, res: Response) => {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Facebook Login - Authorization Request</title>
+        <title>Facebook Multi-Account Login (Demo)</title>
         <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
         <style>
           body {
@@ -837,88 +837,43 @@ app.get("/auth/facebook/mock-login", (req: Request, res: Response) => {
           <div class="bg-[#1877F2] p-6 text-white flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="text-2xl font-bold tracking-tight">facebook</span>
-              <span class="text-xs bg-white/20 px-2 py-0.5 rounded font-semibold">OAuth Partner</span>
+              <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded font-semibold uppercase">Multi-Account Auth</span>
             </div>
-            <span class="text-xs text-white/80 font-medium">Secure Connection</span>
+            <span class="text-xs text-white/80 font-medium">Secure Simulated Portal</span>
           </div>
 
           <div class="p-6 space-y-6">
-            <!-- User Intro -->
-            <div class="flex items-center gap-4 border-b border-slate-100 pb-5">
-              <div class="w-12 h-12 bg-[#1877F2] text-white font-bold rounded-full flex items-center justify-center text-lg shadow-sm">
+            <!-- Selector for Facebook Accounts -->
+            <div class="space-y-2">
+              <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block">1. Chọn Tài Khoản Facebook Đăng Nhập</label>
+              <select 
+                id="account-selector" 
+                onchange="handleAccountChange(this.value)"
+                class="w-full text-sm font-semibold border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 text-slate-800 outline-none focus:border-[#1877F2]"
+              >
+                <option value="0">Tài khoản 1: MÁY TÍNH MŨI NÉ (Doanh nghiệp)</option>
+                <option value="1">Tài khoản 2: Nguyễn Văn A (Cá nhân)</option>
+                <option value="2">Tài khoản 3: Trần Thị B (Mỹ phẩm & Spa)</option>
+              </select>
+            </div>
+
+            <!-- Active User Profile Display -->
+            <div class="flex items-center gap-4 border-y border-slate-100 py-4">
+              <div id="account-avatar" class="w-12 h-12 bg-indigo-600 text-white font-bold rounded-full flex items-center justify-center text-lg shadow-sm">
                 MT
               </div>
               <div>
-                <p class="text-sm font-bold text-slate-800">MÁY TÍNH MŨI NÉ</p>
-                <p class="text-xs text-slate-500">Quản trị viên</p>
+                <p id="account-name" class="text-sm font-bold text-slate-800">MÁY TÍNH MŨI NÉ</p>
+                <p id="account-role" class="text-xs text-slate-500">Quản trị viên doanh nghiệp</p>
               </div>
             </div>
 
-            <!-- Permissions request info -->
+            <!-- Pages Selection List -->
             <div class="space-y-3">
-              <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Requested Permissions</h3>
-              <div class="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <div class="flex items-start gap-2 text-xs text-slate-700">
-                  <span class="text-emerald-500 font-bold">✓</span>
-                  <div>
-                    <span class="font-bold text-slate-800">pages_manage_posts</span>
-                    <p class="text-slate-500 mt-0.5">Allows the app to publish posts on your behalf</p>
-                  </div>
-                </div>
-                <div class="flex items-start gap-2 text-xs text-slate-700">
-                  <span class="text-emerald-500 font-bold">✓</span>
-                  <div>
-                    <span class="font-bold text-slate-800">pages_read_engagement</span>
-                    <p class="text-slate-500 mt-0.5">Allows the app to fetch analytics and views data</p>
-                  </div>
-                </div>
-                <div class="flex items-start gap-2 text-xs text-slate-700">
-                  <span class="text-emerald-500 font-bold">✓</span>
-                  <div>
-                    <span class="font-bold text-slate-800">pages_show_list</span>
-                    <p class="text-slate-500 mt-0.5">Allows the app to discover and list your Pages</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Pages Selection Grid -->
-            <div class="space-y-3">
-              <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Select Facebook Pages to Import</h3>
+              <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">2. Chọn các Trang Fanpage muốn kết nối</h3>
               
-              <div class="space-y-2 max-h-48 overflow-y-auto">
-                <label class="flex items-center justify-between p-3 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
-                  <div class="flex items-center gap-3">
-                    <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=150&auto=format&fit=crop&q=60" class="w-9 h-9 rounded-lg object-cover border" />
-                    <div>
-                      <p class="text-xs font-bold text-slate-800">May Tinh Mui Ne</p>
-                      <p class="text-[10px] text-slate-500">ID: 10249581837582</p>
-                    </div>
-                  </div>
-                  <input type="checkbox" id="page-1" checked class="w-4 h-4 accent-[#1877F2] cursor-pointer" />
-                </label>
-
-                <label class="flex items-center justify-between p-3 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
-                  <div class="flex items-center gap-3">
-                    <img src="https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=150&auto=format&fit=crop&q=60" class="w-9 h-9 rounded-lg object-cover border" />
-                    <div>
-                      <p class="text-xs font-bold text-slate-800">Mui Ne Tech Lab</p>
-                      <p class="text-[10px] text-slate-500">ID: 20938475620192</p>
-                    </div>
-                  </div>
-                  <input type="checkbox" id="page-2" checked class="w-4 h-4 accent-[#1877F2] cursor-pointer" />
-                </label>
-
-                <label class="flex items-center justify-between p-3 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
-                  <div class="flex items-center gap-3">
-                    <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=150&auto=format&fit=crop&q=60" class="w-9 h-9 rounded-lg object-cover border" />
-                    <div>
-                      <p class="text-xs font-bold text-slate-800">Chợ Phan Thiết Online</p>
-                      <p class="text-[10px] text-slate-500">ID: 30129384756201</p>
-                    </div>
-                  </div>
-                  <input type="checkbox" id="page-3" checked class="w-4 h-4 accent-[#1877F2] cursor-pointer" />
-                </label>
+              <div id="pages-container" class="space-y-2 max-h-48 overflow-y-auto">
+                <!-- Pages will be dynamically loaded here by JS -->
               </div>
             </div>
 
@@ -929,84 +884,175 @@ app.get("/auth/facebook/mock-login", (req: Request, res: Response) => {
                 onclick="window.close()" 
                 class="flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-500 transition-colors cursor-pointer"
               >
-                Cancel
+                Hủy bỏ
               </button>
               <button 
                 type="button" 
                 onclick="handleSubmit()" 
                 class="flex-1 py-2.5 bg-[#1877F2] hover:bg-[#1565C0] rounded-lg text-xs font-bold text-white shadow-md transition-colors cursor-pointer"
               >
-                Tiếp tục dưới tên MÁY TÍNH MŨI NÉ
+                <span id="submit-btn-text">Tiếp tục kết nối</span>
               </button>
             </div>
           </div>
         </div>
 
         <script>
+          const ACCOUNTS = [
+            {
+              name: "MÁY TÍNH MŨI NÉ",
+              avatar: "MT",
+              role: "Quản trị viên doanh nghiệp",
+              avatarColor: "bg-[#1877F2]",
+              pages: [
+                {
+                  id: "10249581837582",
+                  name: "May Tinh Mui Ne",
+                  accessToken: "demo_token_maytinhmuine",
+                  picture: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=150&auto=format&fit=crop&q=60"
+                },
+                {
+                  id: "20938475620192",
+                  name: "Mui Ne Tech Lab",
+                  accessToken: "demo_token_techlab",
+                  picture: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=150&auto=format&fit=crop&q=60"
+                }
+              ]
+            },
+            {
+              name: "Nguyễn Văn A (Cá nhân)",
+              avatar: "VA",
+              role: "Nhà sáng lập / Người sáng tạo nội dung",
+              avatarColor: "bg-emerald-600",
+              pages: [
+                {
+                  id: "30129384756201",
+                  name: "Chợ Phan Thiết Online",
+                  accessToken: "demo_token_phanthiet",
+                  picture: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=150&auto=format&fit=crop&q=60"
+                },
+                {
+                  id: "40129384756202",
+                  name: "Thời Trang Phan Thiết",
+                  accessToken: "demo_token_fashion",
+                  picture: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=60"
+                }
+              ]
+            },
+            {
+              name: "Trần Thị B (Mỹ phẩm & Spa)",
+              avatar: "TB",
+              role: "Chủ thương hiệu mỹ phẩm",
+              avatarColor: "bg-purple-600",
+              pages: [
+                {
+                  id: "50129384756203",
+                  name: "Mỹ Phẩm Cao Cấp Mũi Né",
+                  accessToken: "demo_token_cosmetics",
+                  picture: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=150&auto=format&fit=crop&q=60"
+                },
+                {
+                  id: "60129384756204",
+                  name: "Spa & Beauty Phan Thiết",
+                  accessToken: "demo_token_spa",
+                  picture: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=150&auto=format&fit=crop&q=60"
+                }
+              ]
+            }
+          ];
+
+          let activeAccountIndex = 0;
+
+          function handleAccountChange(val) {
+            activeAccountIndex = parseInt(val);
+            renderAccount();
+          }
+
+          function renderAccount() {
+            const acc = ACCOUNTS[activeAccountIndex];
+            
+            // Render profile info
+            const avatarEl = document.getElementById("account-avatar");
+            avatarEl.className = "w-12 h-12 text-white font-bold rounded-full flex items-center justify-center text-lg shadow-sm " + acc.avatarColor;
+            avatarEl.innerText = acc.avatar;
+            document.getElementById("account-name").innerText = acc.name;
+            document.getElementById("account-role").innerText = acc.role;
+            document.getElementById("submit-btn-text").innerText = "Tiếp tục dưới tên " + acc.name.split(" ")[0];
+
+            // Render pages
+            const container = document.getElementById("pages-container");
+            container.innerHTML = "";
+            
+            acc.pages.forEach((p, idx) => {
+              const label = document.createElement("label");
+              label.className = "flex items-center justify-between p-3 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors";
+              label.innerHTML = \`
+                <div class="flex items-center gap-3">
+                  <img src="\${p.picture}" class="w-9 h-9 rounded-lg object-cover border" />
+                  <div>
+                    <p class="text-xs font-bold text-slate-800">\${p.name}</p>
+                    <p class="text-[10px] text-slate-500">ID: \${p.id}</p>
+                  </div>
+                </div>
+                <input type="checkbox" id="page-idx-\${idx}" checked class="w-4 h-4 accent-[#1877F2] cursor-pointer" />
+              \`;
+              container.appendChild(label);
+            });
+          }
+
           function handleSubmit() {
-            const pages = [];
+            const acc = ACCOUNTS[activeAccountIndex];
+            const selectedPages = [];
             
-            if (document.getElementById('page-1').checked) {
-              pages.push({
-                id: "10249581837582",
-                name: "May Tinh Mui Ne",
-                accessToken: "demo_token_maytinhmuine",
-                picture: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=150&auto=format&fit=crop&q=60"
-              });
-            }
-            
-            if (document.getElementById('page-2').checked) {
-              pages.push({
-                id: "20938475620192",
-                name: "Mui Ne Tech Lab",
-                accessToken: "demo_token_techlab",
-                picture: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=150&auto=format&fit=crop&q=60"
-              });
-            }
-            
-            if (document.getElementById('page-3').checked) {
-              pages.push({
-                id: "30129384756201",
-                name: "Chợ Phan Thiết Online",
-                accessToken: "demo_token_phanthiet",
-                picture: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=150&auto=format&fit=crop&q=60"
-              });
+            acc.pages.forEach((p, idx) => {
+              const chk = document.getElementById("page-idx-" + idx);
+              if (chk && chk.checked) {
+                selectedPages.push({
+                  ...p,
+                  accountName: acc.name,
+                  accountPicture: acc.avatarColor // Use color name as reference
+                });
+              }
+            });
+
+            if (selectedPages.length === 0) {
+              alert("Vui lòng chọn ít nhất 1 trang Fanpage để nhập vào hệ thống.");
+              return;
             }
 
-            // 1. Send via BroadcastChannel
+            // Transmit with broadcast channel, storage and postMessage
             try {
               const bc = new BroadcastChannel('facebook_auth');
-              bc.postMessage({ type: 'FB_AUTH_SUCCESS', pages: pages });
+              bc.postMessage({ type: 'FB_AUTH_SUCCESS', pages: selectedPages });
               bc.close();
             } catch (e) {
               console.warn("BroadcastChannel error:", e);
             }
 
-            // 2. Send via LocalStorage
             try {
-              localStorage.setItem('fb_auth_success', JSON.stringify({ pages: pages, timestamp: Date.now() }));
+              localStorage.setItem('fb_auth_success', JSON.stringify({ pages: selectedPages, timestamp: Date.now() }));
             } catch (e) {
               console.warn("localStorage error:", e);
             }
 
-            // 3. Fallback to postMessage
             if (window.opener) {
               try {
-                window.opener.postMessage({ type: 'FB_AUTH_SUCCESS', pages: pages }, '*');
+                window.opener.postMessage({ type: 'FB_AUTH_SUCCESS', pages: selectedPages }, '*');
               } catch (e) {
                 console.warn("postMessage error:", e);
               }
             }
 
-            // Close the popup after a small delay
             setTimeout(() => {
               window.close();
-              // If window didn't close (not a popup), redirect to dashboard
               setTimeout(() => {
                 window.location.href = '/';
               }, 500);
             }, 300);
           }
+
+          // Initial Render
+          renderAccount();
         </script>
       </body>
     </html>

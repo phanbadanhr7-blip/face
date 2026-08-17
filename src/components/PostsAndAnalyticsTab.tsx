@@ -391,7 +391,7 @@ export default function PostsAndAnalyticsTab({
               >
                 <option value="all">Tất cả Trang Fanpage</option>
                 {pages.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id}>{p.name} ({p.accountName || "MÁY TÍNH MŨI NÉ"})</option>
                 ))}
               </select>
 
@@ -676,7 +676,7 @@ export default function PostsAndAnalyticsTab({
               className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 outline-hidden"
             >
               {pages.map(p => (
-                <option key={p.id} value={p.name}>{p.name} (Facebook Page)</option>
+                <option key={p.id} value={p.name}>{p.name} ({p.accountName || "MÁY TÍNH MŨI NÉ"})</option>
               ))}
               <option value="default">Toàn bộ hệ thống</option>
             </select>

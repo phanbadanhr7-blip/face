@@ -1202,7 +1202,7 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
             >
               {pages.map(page => (
                 <option key={page.id} value={page.id}>
-                  🚩 {page.name}
+                  🚩 {page.name} ({page.accountName || "MÁY TÍNH MŨI NÉ"})
                 </option>
               ))}
             </select>

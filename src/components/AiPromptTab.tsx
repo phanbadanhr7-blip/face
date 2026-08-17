@@ -369,7 +369,7 @@ Khuyến mãi: Khách đi nhóm 2 người trở lên được tặng voucher ng
             className="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 text-slate-800 font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none cursor-pointer"
           >
             {pages.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+              <option key={p.id} value={p.id}>{p.name} ({p.accountName || "MÁY TÍNH MŨI NÉ"})</option>
             ))}
           </select>
         ) : (

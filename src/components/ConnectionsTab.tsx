@@ -37,6 +37,7 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
   const [inputToken, setInputToken] = useState("");
   const [scanError, setScanError] = useState<string | null>(null);
   const [activeModalTab, setActiveModalTab] = useState<"oauth" | "token" | "manual">("oauth");
+  const [selectedAccountFilter, setSelectedAccountFilter] = useState<string>("all");
 
   // Manual Form State
   const [pageName, setPageName] = useState("");
@@ -263,6 +264,52 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
         </div>
       </div>
 
+      {/* Connected Facebook Accounts filtering */}
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+          <Facebook className="w-3.5 h-3.5 text-blue-600" />
+          Tài khoản Facebook đã kết nối ({Array.from(new Set(pages.map(p => p.accountName || "MÁY TÍNH MŨI NÉ"))).length})
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <button
+            onClick={() => setSelectedAccountFilter("all")}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+              selectedAccountFilter === "all"
+                ? "bg-blue-600 border-blue-600 text-white shadow-xs"
+                : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <span>👥 Tất cả tài khoản</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${selectedAccountFilter === "all" ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
+              {pages.length}
+            </span>
+          </button>
+          {Array.from(new Set(pages.map(p => p.accountName || "MÁY TÍNH MŨI NÉ"))).map((account) => {
+            const count = pages.filter(p => (p.accountName || "MÁY TÍNH MŨI NÉ") === account).length;
+            let badgeBg = "bg-sky-500";
+            if (account.includes("Nguyễn Văn A")) badgeBg = "bg-emerald-500";
+            if (account.includes("Trần Thị B")) badgeBg = "bg-purple-500";
+            return (
+              <button
+                key={account}
+                onClick={() => setSelectedAccountFilter(account)}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 cursor-pointer ${
+                  selectedAccountFilter === account
+                    ? "bg-blue-600 border-blue-600 text-white shadow-xs"
+                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <span className={`w-2.5 h-2.5 rounded-full ${badgeBg}`}></span>
+                <span>{account}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${selectedAccountFilter === account ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Filter / Search section */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -292,30 +339,35 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
 
       {/* Connection Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {pages.map((page) => (
-          <div 
-            key={page.id} 
-            className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col"
-          >
-            {/* Card Header */}
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-50"></span>
-                <span className="text-xs font-semibold text-emerald-700">Đang hoạt động</span>
+        {pages
+          .filter((p) => {
+            if (selectedAccountFilter === "all") return true;
+            return (p.accountName || "MÁY TÍNH MŨI NÉ") === selectedAccountFilter;
+          })
+          .map((page) => (
+            <div 
+              key={page.id} 
+              className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col"
+            >
+              {/* Card Header */}
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-50"></span>
+                  <span className="text-xs font-semibold text-emerald-700">Đang hoạt động</span>
+                </div>
+                {page.isDefault ? (
+                  <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-[11px] font-bold rounded-full border border-blue-100">
+                    Mặc định
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => onSetDefaultPage(page.id)}
+                    className="text-xs text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
+                  >
+                    Đặt mặc định
+                  </button>
+                )}
               </div>
-              {page.isDefault ? (
-                <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-[11px] font-bold rounded-full border border-blue-100">
-                  Mặc định
-                </span>
-              ) : (
-                <button
-                  onClick={() => onSetDefaultPage(page.id)}
-                  className="text-xs text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
-                >
-                  Đặt mặc định
-                </button>
-              )}
-            </div>
 
             {/* Card Body */}
             <div className="p-5 flex-1 space-y-4">
@@ -342,6 +394,16 @@ export default function ConnectionsTab({ pages, onAddPage, onDisconnectPage, onS
 
               <div className="p-3 bg-slate-50 rounded-lg space-y-1.5 border border-slate-100 text-xs">
                 <div className="flex items-center justify-between text-slate-500">
+                  <span>Tài khoản FB:</span>
+                  <span className="font-bold text-slate-800 flex items-center gap-1">
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      (page.accountName || "MÁY TÍNH MŨI NÉ").includes("Nguyễn Văn A") ? "bg-emerald-500" :
+                      (page.accountName || "MÁY TÍNH MŨI NÉ").includes("Trần Thị B") ? "bg-purple-500" : "bg-sky-500"
+                    }`}></span>
+                    {page.accountName || "MÁY TÍNH MŨI NÉ"}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between text-slate-500">
                   <span>Loại kết nối:</span>
                   <span className="font-medium text-slate-700">Facebook Graph API v18.0</span>
                 </div>
