@@ -1,13 +1,34 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MAY TINH MUI NE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Hệ Thống Quản Lý Mạng Xã Hội</title>
+    
+    <!-- PWA Primary Meta Tags -->
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="description" content="Hệ thống quản lý Fanpage, lên lịch bài viết và tự động hóa với AI" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/icon-192.svg" />
+    
+    <!-- iOS Safari PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="FB Manager" />
+    <link rel="apple-touch-icon" href="/icon-192.svg" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('PWA ServiceWorker registered successfully:', reg.scope))
+            .catch(err => console.warn('PWA ServiceWorker registration failed:', err));
+        });
+      }
+    </script>
   </body>
 </html>
 

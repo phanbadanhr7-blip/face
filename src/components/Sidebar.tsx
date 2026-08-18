@@ -11,6 +11,7 @@ import {
   Sun,
   Moon
 } from "lucide-react";
+import InstallPwaBanner from "./InstallPwaBanner";
 
 interface SidebarProps {
   activeTab: string;
@@ -109,7 +110,10 @@ export default function Sidebar({
           })}
         </nav>
 
-
+        {/* PWA Install Banner */}
+        <div className="pt-2 pb-3 border-t border-slate-200/80 dark:border-slate-800">
+          <InstallPwaBanner />
+        </div>
       </div>
     </>
   );

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="50%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="sparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0f172a" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <!-- Background Card -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle overlay pattern -->
+  <circle cx="400" cy="110" r="160" fill="#ffffff" opacity="0.06"/>
+  <circle cx="100" cy="420" r="200" fill="#ffffff" opacity="0.04"/>
+
+  <!-- Icon Content: Facebook-style social connection + AI Sparkle -->
+  <g filter="url(#shadow)">
+    <!-- Main Chat/Post Bubble -->
+    <path d="M140 160 C140 126.863 166.863 100 200 100 L312 100 C345.137 100 372 126.863 372 160 L372 260 C372 293.137 345.137 320 312 320 L240 320 L180 370 L180 320 L200 320 C166.863 320 140 293.137 140 260 Z" fill="#ffffff" opacity="0.96"/>
+    
+    <!-- FB / Social symbol inside bubble -->
+    <path d="M266 150 H240 C223.431 150 210 163.431 210 180 V200 H190 V230 H210 V300 H240 V230 H266 L272 200 H240 V180 C240 174.477 244.477 170 250 170 H266 V150 Z" fill="#1e40af"/>
+
+    <!-- AI Sparkle Badge -->
+    <g transform="translate(320, 260)">
+      <circle cx="48" cy="48" r="56" fill="#0f172a"/>
+      <circle cx="48" cy="48" r="50" fill="url(#sparkleGrad)"/>
+      <!-- Sparkle Star -->
+      <path d="M48 20 C50 34 62 46 76 48 C62 50 50 62 48 76 C46 62 34 50 20 48 C34 46 46 34 48 20 Z" fill="#ffffff"/>
+      <!-- Mini Sparkle -->
+      <path d="M72 18 C73 24 78 29 84 30 C78 31 73 36 72 42 C71 36 66 31 60 30 C66 29 71 24 72 18 Z" fill="#ffffff" opacity="0.85"/>
+    </g>
+  </g>
+</svg>

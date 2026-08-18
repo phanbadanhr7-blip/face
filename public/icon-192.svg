@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bgGrad192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="50%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="sparkleGrad192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Card -->
+  <rect width="192" height="192" rx="42" fill="url(#bgGrad192)"/>
+  
+  <!-- Bubble -->
+  <path d="M52 60 C52 47.57 62.07 37.5 74.5 37.5 L117.5 37.5 C129.93 37.5 140 47.57 140 60 L140 97.5 C140 109.93 129.93 120 117.5 120 L90 120 L67.5 138.75 L67.5 120 C58.93 120 52 113.07 52 104.5 Z" fill="#ffffff" opacity="0.96"/>
+  
+  <!-- FB "f" inside bubble -->
+  <path d="M100 56 H90 C83.78 56 78.75 61.03 78.75 67.25 V75 H71.25 V86.25 H78.75 V112.5 H90 V86.25 H99.75 L102 75 H90 V67.25 C90 65.18 91.68 63.5 93.75 63.5 H100 V56 Z" fill="#1e40af"/>
+
+  <!-- AI Sparkle Badge -->
+  <g transform="translate(120, 97)">
+    <circle cx="18" cy="18" r="21" fill="#0f172a"/>
+    <circle cx="18" cy="18" r="19" fill="url(#sparkleGrad192)"/>
+    <path d="M18 7.5 C18.75 12.75 23.25 17.25 28.5 18 C23.25 18.75 18.75 23.25 18 28.5 C17.25 23.25 12.75 18.75 7.5 18 C12.75 17.25 17.25 12.75 18 7.5 Z" fill="#ffffff"/>
+  </g>
+</svg>

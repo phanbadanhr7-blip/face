@@ -21,7 +21,9 @@ import {
   Phone,
   Globe,
   Clock,
-  Info
+  Info,
+  Smartphone,
+  Download
 } from "lucide-react";
 import { getStoredPages, setStoredPages } from "../firebase";
 import { FacebookPage } from "../types";
@@ -840,7 +842,29 @@ export default function SettingsTab() {
             </div>
           </div>
 
-          {/* Card 4: Reference Docs */}
+          {/* Card 4: Progressive Web App (PWA) Installation */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs space-y-3.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider">Cài đặt Ứng dụng PWA</h4>
+                <p className="text-[11px] text-slate-500">Dùng trên điện thoại & máy tính như App gốc</p>
+              </div>
+            </div>
+
+            <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2 leading-relaxed">
+              <p className="font-medium text-slate-800">💡 Hướng dẫn cài đặt thủ công từ trình duyệt:</p>
+              <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600">
+                <li><strong>Chrome / Edge (Máy tính):</strong> Nhấp vào biểu tượng <i>Install / Cài đặt</i> trên thanh URL.</li>
+                <li><strong>Android (Chrome):</strong> Bấm nút 3 chấm ở góc phải ➔ <i>"Thêm vào Màn hình chính"</i>.</li>
+                <li><strong>iPhone / iPad (Safari):</strong> Bấm nút <i>Chia sẻ (Share)</i> ➔ <i>"Thêm vào Màn hình chính"</i>.</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Card 5: Reference Docs */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs space-y-3.5">
             <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider">Tài liệu tham khảo tích hợp</h4>
             <ul className="text-xs space-y-2.5">
