@@ -1111,13 +1111,13 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
   // 1. Empty state if no connected Facebook Pages
   if (pages.length === 0) {
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-5 max-w-xl mx-auto shadow-sm my-10">
-        <div className="w-16 h-16 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto text-blue-600 animate-pulse">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center space-y-5 max-w-xl mx-auto shadow-sm my-10">
+        <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-800/60 flex items-center justify-center mx-auto text-blue-600 dark:text-blue-400 animate-pulse">
           <MessageSquare className="w-8 h-8" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-lg font-bold text-slate-800">Messenger Inbox Chưa Sẵn Sàng</h2>
-          <p className="text-sm text-slate-500 leading-relaxed">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Messenger Inbox Chưa Sẵn Sàng</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
             Hệ thống cần liên kết ít nhất một Trang Facebook (Facebook Page) của bạn để đồng bộ tin nhắn Messenger, trả lời tự động và kích hoạt Trợ lý AI.
           </p>
         </div>
@@ -1132,31 +1132,31 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs flex flex-col h-[calc(100vh-112px)] md:h-[calc(100vh-130px)]">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs flex flex-col h-[calc(100vh-112px)] md:h-[calc(100vh-130px)]">
       
       {/* Top Header Controls */}
-      <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50/70 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+      <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+          <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950/80 flex items-center justify-center text-blue-600 dark:text-blue-400">
             <MessageCircleCode className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-bold text-slate-800 text-base">
+              <h1 className="font-bold text-slate-800 dark:text-slate-100 text-base">
                 Messenger Inbox
               </h1>
               {selectedPage?.accessToken && !selectedPage.accessToken.startsWith("demo_") ? (
-                <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 animate-pulse"></span>
                   Live Facebook
                 </span>
               ) : (
-                <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="text-[10px] bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                   Demo Mode
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {lastSyncedAt 
                 ? `Đồng bộ lần cuối lúc: ${lastSyncedAt.toLocaleTimeString("vi-VN")}` 
                 : "Đồng bộ tin nhắn & chăm sóc khách hàng tự động"}
@@ -1170,10 +1170,10 @@ export default function MessengerTab({ pages, isDemoMode, onNavigateToConnection
           <button
             onClick={() => syncFacebookConversations(false)}
             disabled={isSyncing}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold shadow-2xs hover:shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold shadow-2xs hover:shadow-xs transition-all cursor-pointer disabled:opacity-50"
             title="Đồng bộ tin nhắn mới nhất từ Facebook Page"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${isSyncing ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-blue-600 dark:text-blue-400 ${isSyncing ? "animate-spin" : ""}`} />
             <span>{isSyncing ? "Đang đồng bộ..." : "Đồng bộ tin nhắn"}</span>
           </button>
 

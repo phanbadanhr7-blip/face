@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
-import { Menu } from "lucide-react";
+import { Menu, Sun, Moon } from "lucide-react";
 import ConnectionsTab from "./components/ConnectionsTab";
 import MessengerTab from "./components/MessengerTab";
 import CreatePostTab from "./components/CreatePostTab";
@@ -25,6 +25,34 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>("connections");
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+
+  // Theme State ("light" | "dark")
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    try {
+      const saved = localStorage.getItem("app_theme");
+      if (saved === "dark" || saved === "light") return saved;
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    } catch {
+      return "light";
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("app_theme", theme);
+      if (theme === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    } catch (e) {
+      console.warn("Failed to set theme class:", e);
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
 
   const [pages, setPages] = useState<FacebookPage[]>(() => getStoredPages());
   const [posts, setPosts] = useState<FacebookPost[]>(() => getStoredPosts());
@@ -531,7 +559,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans transition-colors duration-200">
       
       {/* Sidebar Navigation */}
       <Sidebar 
@@ -539,20 +567,22 @@ export default function App() {
         setActiveTab={setActiveTab} 
         isOpen={isMobileSidebarOpen}
         onClose={() => setIsMobileSidebarOpen(false)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       {/* Main Panel */}
-      <main className="flex-1 md:pl-64 min-h-screen bg-slate-50/50 flex flex-col">
+      <main className="flex-1 md:pl-64 min-h-screen bg-slate-50/50 dark:bg-slate-950/80 flex flex-col transition-colors duration-200">
         {/* Mobile Header Bar */}
-        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-20">
+        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="p-1.5 -ml-1.5 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+              className="p-1.5 -ml-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className="font-bold text-sm text-slate-800 tracking-tight">
+            <span className="font-bold text-sm text-slate-800 dark:text-slate-100 tracking-tight">
               {activeTab === "connections" ? "Kết nối Trang" :
                activeTab === "messenger" ? "Hộp thư Messenger" :
                activeTab === "create-post" ? "Tạo bài viết AI" :
@@ -560,8 +590,17 @@ export default function App() {
                activeTab === "posts-analytics" ? "Quản lý bài viết" : "Cấu hình"}
             </span>
           </div>
-          <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
-            MT
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
+              title="Chuyển chế độ sáng/tối"
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+            </button>
+            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+              MT
+            </div>
           </div>
         </header>
 

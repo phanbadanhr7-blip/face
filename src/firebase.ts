@@ -9,14 +9,16 @@ import {
 } from "firebase/firestore";
 import { FacebookPage, FacebookPost } from "./types";
 
-// Web app's Firebase configuration
+import firebaseConfigData from "../firebase-applet-config.json";
+
+// Web app's Firebase configuration dynamically loaded from project config
 const firebaseConfig = {
-  apiKey: "AIzaSyBiry0umVMIZ1vrO_KiMXdYY03jqDLvxeI",
-  authDomain: "face-36f86.firebaseapp.com",
-  projectId: "face-36f86",
-  storageBucket: "face-36f86.firebasestorage.app",
-  messagingSenderId: "831804236769",
-  appId: "1:831804236769:web:20f40dce448928c558a8a0"
+  apiKey: firebaseConfigData.apiKey,
+  authDomain: firebaseConfigData.authDomain,
+  projectId: firebaseConfigData.projectId,
+  storageBucket: firebaseConfigData.storageBucket,
+  messagingSenderId: firebaseConfigData.messagingSenderId,
+  appId: firebaseConfigData.appId
 };
 
 // Initialize Firebase safely

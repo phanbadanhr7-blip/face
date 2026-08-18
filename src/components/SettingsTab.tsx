@@ -294,13 +294,13 @@ export default function SettingsTab() {
   return (
     <div className="space-y-6 font-sans max-w-5xl">
       {/* Header Banner */}
-      <div className="pb-5 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="pb-5 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Settings className="w-6 h-6 text-indigo-600" />
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
+            <Settings className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
             Cấu Hình Hệ Thống Tổng Hợp
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Quản trị mô hình ngôn ngữ lớn (LLM), kết nối đa kênh Facebook/Zalo OA và quản lý khóa API bảo mật.
           </p>
         </div>
@@ -316,8 +316,8 @@ export default function SettingsTab() {
       </div>
 
       {saveStatus === "success" && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-2.5 text-xs font-semibold animate-fade-in shadow-3xs">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-300 rounded-xl flex items-center gap-2.5 text-xs font-semibold animate-fade-in shadow-3xs">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>Cấu hình hệ thống đã được lưu trữ thành công trên trình duyệt của bạn!</span>
         </div>
       )}
@@ -328,12 +328,12 @@ export default function SettingsTab() {
         <div className="lg:col-span-8 space-y-6">
           
           {/* Card 1: LLM Engine Customization */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs space-y-5">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
-              <Cpu className="w-5 h-5 text-indigo-600" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-3xs space-y-5">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <Cpu className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               <div>
-                <h3 className="font-bold text-sm text-slate-800">Cấu Hình Mô Hình Trí Tuệ Nhân Tạo (LLM)</h3>
-                <p className="text-[11px] text-slate-400">Chọn nhà cung cấp và nhập API Key riêng để vận hành Trợ lý AI</p>
+                <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">Cấu Hình Mô Hình Trí Tuệ Nhân Tạo (LLM)</h3>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500">Chọn nhà cung cấp và nhập API Key riêng để vận hành Trợ lý AI</p>
               </div>
             </div>
 

@@ -8,6 +8,7 @@ Chào mừng bạn đến với hệ thống quản lý Fanpage chuyên nghiệp
 
 ### 1. 🔗 Kết Nối & Quản Lý Nhiều Trang & Tài Khoản Facebook (Multi-Account Support)
 * **Kết nối đa tài khoản:** Hỗ trợ kết nối và nhận diện độc lập giữa nhiều tài khoản Facebook cá nhân hoặc doanh nghiệp khác nhau (ví dụ: Tài khoản Doanh nghiệp, Cá nhân, Spa/Mỹ phẩm...).
+* **Xóa bộ nhớ & Đăng xuất (Clear Cache & Logout):** Tính năng cho phép xóa sạch toàn bộ dữ liệu kết nối cũ, giúp dễ dàng chuyển đổi sang tài khoản Facebook mới mà không bị xung đột dữ liệu.
 * **Tự động nhận diện Tên Tài khoản:** Khi kết nối bằng Access Token hoặc đăng nhập OAuth, hệ thống sẽ tự động gọi API Graph (`/me`) để lấy chính xác **Họ & Tên của tài khoản Facebook cá nhân** quản lý và gán tương ứng, không còn bị cố định nhãn mặc định.
 * **Tùy biến tên liên kết thủ công:** Cung cấp thêm ô nhập *Tên tài khoản Facebook (Cá nhân liên kết)* tại tab thêm thủ công để bạn dễ dàng phân nhóm và quản lý theo chủ sở hữu.
 * **Bộ lọc Tài khoản thông minh:** Tích hợp bộ lọc tài khoản trực quan cho phép bạn xem nhanh các trang Fanpage thuộc sở hữu của từng tài khoản riêng biệt để dễ dàng kiểm soát.

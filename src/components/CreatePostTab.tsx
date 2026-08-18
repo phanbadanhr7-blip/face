@@ -396,28 +396,28 @@ export default function CreatePostTab({ pages, posts = [], isDemoMode, onAddPost
       <div className="xl:col-span-7 space-y-6">
         
         {/* Connection Quick Picker & Quick Templates Bar */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
                 Fanpage đăng tải bài viết
               </label>
-              <p className="text-[11px] text-slate-400">Chọn trang Facebook đích để xuất bản</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">Chọn trang Facebook đích để xuất bản</p>
             </div>
             
             {/* Quick Templates Dropdown */}
             <div className="relative group">
               <button
                 type="button"
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
               >
-                <FileText className="w-3.5 h-3.5 text-blue-600" />
+                <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 <span>Mẫu Bài Viết Sẵn Có</span>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
 
-              <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 hidden group-hover:block group-focus-within:block z-30 animate-in fade-in duration-100">
-                <span className="text-[10px] font-bold text-slate-400 px-2 py-1 block uppercase">
+              <div className="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg p-1.5 hidden group-hover:block group-focus-within:block z-30 animate-in fade-in duration-100">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 px-2 py-1 block uppercase">
                   Chọn mẫu bài viết nhanh:
                 </span>
                 {POST_TEMPLATES.map((tmpl) => (
@@ -457,6 +457,113 @@ export default function CreatePostTab({ pages, posts = [], isDemoMode, onAddPost
               Chưa có Fanpage nào được kết nối. Vui lòng vào tab "Kênh Kết Nối" để liên kết tài khoản.
             </p>
           )}
+        </div>
+
+        {/* Gemini AI Full Post Generator Box */}
+        <div className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 shadow-sm space-y-4 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-2xl pointer-events-none"></div>
+          
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold tracking-wide text-blue-400 flex items-center gap-1.5 uppercase">
+              <Sparkles className="w-4 h-4" />
+              Soạn thảo bài viết tự động với Gemini AI
+            </h3>
+            <span className="text-[10px] font-bold bg-blue-600/30 text-blue-300 border border-blue-600/20 px-2 py-0.5 rounded">
+              Gemini 3.1
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="Nhập ý tưởng (Ví dụ: Máy Tính Mũi Né nâng cấp SSD giảm giá 20% tuần này)..."
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-hidden focus:border-blue-500"
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Giọng điệu</label>
+                <select
+                  value={aiTone}
+                  onChange={(e) => setAiTone(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 text-xs rounded-lg text-white outline-hidden focus:border-blue-500"
+                >
+                  <option value="Exciting 🚀">Hào hứng 🚀</option>
+                  <option value="Professional 💼">Chuyên nghiệp 💼</option>
+                  <option value="Friendly 😊">Thân thiện 😊</option>
+                  <option value="Urgent ⚠️">Khẩn cấp ⚠️</option>
+                  <option value="Humorous 🎭">Hài hước 🎭</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Ngôn ngữ</label>
+                <select
+                  value={aiLanguage}
+                  onChange={(e) => setAiLanguage(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 text-xs rounded-lg text-white outline-hidden focus:border-blue-500"
+                >
+                  <option value="Vietnamese 🇻🇳">Tiếng Việt 🇻🇳</option>
+                  <option value="English 🇺🇸">Tiếng Anh 🇺🇸</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => handleAiGenerate('create')}
+                disabled={aiLoading}
+                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                <span>Tạo bài viết mới</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleAiGenerate('improve')}
+                disabled={aiLoading || !message.trim()}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-semibold text-xs border border-slate-700 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                title="Tối ưu và làm mượt bài viết hiện tại"
+              >
+                <span>Tối ưu bản thảo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleAiGenerate('hashtags')}
+                disabled={aiLoading || !message.trim()}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-semibold text-xs border border-slate-700 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <span>+10 Hashtags</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleAiGenerate('translate')}
+                disabled={aiLoading || !message.trim()}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-semibold text-xs border border-slate-700 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <span>Dịch {aiLanguage.includes('English') ? 'sang Tiếng Anh' : 'sang Tiếng Việt'}</span>
+              </button>
+            </div>
+
+            {aiError && (
+              <div className="p-3 bg-red-900/40 border border-red-800/50 text-red-200 text-xs rounded-xl flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{aiError}</span>
+              </div>
+            )}
+            {aiSuccessMessage && (
+              <div className="p-3 bg-emerald-950/40 border border-emerald-800/40 text-emerald-200 text-xs rounded-xl flex items-start gap-2">
+                <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{aiSuccessMessage}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Enhanced Post Message Editor */}
@@ -823,113 +930,6 @@ export default function CreatePostTab({ pages, posts = [], isDemoMode, onAddPost
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Gemini AI Full Post Generator Box */}
-        <div className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 shadow-sm space-y-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-2xl pointer-events-none"></div>
-          
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold tracking-wide text-blue-400 flex items-center gap-1.5 uppercase">
-              <Sparkles className="w-4 h-4" />
-              Soạn thảo bài viết tự động với Gemini AI
-            </h3>
-            <span className="text-[10px] font-bold bg-blue-600/30 text-blue-300 border border-blue-600/20 px-2 py-0.5 rounded">
-              Gemini 3.1
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            <input
-              type="text"
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              placeholder="Nhập ý tưởng (Ví dụ: Máy Tính Mũi Né nâng cấp SSD giảm giá 20% tuần này)..."
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-hidden focus:border-blue-500"
-            />
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Giọng điệu</label>
-                <select
-                  value={aiTone}
-                  onChange={(e) => setAiTone(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 text-xs rounded-lg text-white outline-hidden focus:border-blue-500"
-                >
-                  <option value="Exciting 🚀">Hào hứng 🚀</option>
-                  <option value="Professional 💼">Chuyên nghiệp 💼</option>
-                  <option value="Friendly 😊">Thân thiện 😊</option>
-                  <option value="Urgent ⚠️">Khẩn cấp ⚠️</option>
-                  <option value="Humorous 🎭">Hài hước 🎭</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Ngôn ngữ</label>
-                <select
-                  value={aiLanguage}
-                  onChange={(e) => setAiLanguage(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 text-xs rounded-lg text-white outline-hidden focus:border-blue-500"
-                >
-                  <option value="Vietnamese 🇻🇳">Tiếng Việt 🇻🇳</option>
-                  <option value="English 🇺🇸">Tiếng Anh 🇺🇸</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              <button
-                type="button"
-                onClick={() => handleAiGenerate('create')}
-                disabled={aiLoading}
-                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                <span>Tạo bài viết mới</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleAiGenerate('improve')}
-                disabled={aiLoading || !message.trim()}
-                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-semibold text-xs border border-slate-700 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
-                title="Tối ưu và làm mượt bài viết hiện tại"
-              >
-                <span>Tối ưu bản thảo</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleAiGenerate('hashtags')}
-                disabled={aiLoading || !message.trim()}
-                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-semibold text-xs border border-slate-700 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <span>+10 Hashtags</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleAiGenerate('translate')}
-                disabled={aiLoading || !message.trim()}
-                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-semibold text-xs border border-slate-700 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <span>Dịch {aiLanguage.includes('English') ? 'sang Tiếng Anh' : 'sang Tiếng Việt'}</span>
-              </button>
-            </div>
-
-            {aiError && (
-              <div className="p-3 bg-red-900/40 border border-red-800/50 text-red-200 text-xs rounded-xl flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{aiError}</span>
-              </div>
-            )}
-            {aiSuccessMessage && (
-              <div className="p-3 bg-emerald-950/40 border border-emerald-800/40 text-emerald-200 text-xs rounded-xl flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{aiSuccessMessage}</span>
               </div>
             )}
           </div>
